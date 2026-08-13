@@ -102,8 +102,6 @@ function RoundScreen({
   const advancing = useRef(false)
   const progress = useRaceProgress(room.code)
 
-  const self = room.players.find((p) => p.id === selfId)
-  const isHost = self?.isHost ?? false
   const timeLeft = Math.max(0, mode.roundSeconds - elapsed)
   const timeUp = timeLeft <= 0
 
@@ -206,10 +204,13 @@ function RoundScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeUp])
 
-  // Host: once every survivor has a progress row marked finished (or time is up for everyone),
-  // rank the round and advance — eliminate last place, seed next round or finish tournament.
+  // Any surviving player's client (not just the host) may advance the round
+  // once everyone has submitted — this keeps the tournament from stalling
+  // if the host is the one eliminated, or their tab is slow/backgrounded.
+  // The DB-level round-number guard in advanceEliminationRound means it's
+  // safe for multiple clients to race this; only the first write applies.
   useEffect(() => {
-    if (!isHost || advancing.current) return
+    if (advancing.current) return
     if (!timeUp) return
 
     const survivorIds = survivors.map((p) => p.id)
@@ -231,14 +232,18 @@ function RoundScreen({
       const nextEliminatedIds = [...room.eliminatedIds, eliminatedThisRound.id]
       const remaining = survivors.length - 1
 
-      if (remaining <= 1) {
-        await advanceEliminationRound(room.code, nextEliminatedIds, room.passage ?? '')
-        await finishTournament(room.code)
-      } else {
-        await advanceEliminationRound(room.code, nextEliminatedIds, getRandomPassage())
+      try {
+        if (remaining <= 1) {
+          await advanceEliminationRound(room.code, room.roundNumber, nextEliminatedIds, room.passage ?? '')
+          await finishTournament(room.code)
+        } else {
+          await advanceEliminationRound(room.code, room.roundNumber, nextEliminatedIds, getRandomPassage())
+        }
+      } catch {
+        // Another client already advanced this round — safe to ignore.
       }
     })()
-  }, [isHost, timeUp, progress, survivors, room.code, room.eliminatedIds, room.passage])
+  }, [timeUp, progress, survivors, room.code, room.eliminatedIds, room.passage, room.roundNumber])
 
   const roundResults = [...survivors]
     .map((p) => ({ player: p, progress: progress.find((pr) => pr.playerId === p.id) }))
@@ -257,9 +262,7 @@ function RoundScreen({
             <h1 className="text-2xl font-semibold tracking-tight">Time&apos;s up!</h1>
           </div>
           <RoundRankingList results={roundResults} selfId={selfId} eliminateLast />
-          <p className="text-center text-xs text-neutral-500 animate-pulse">
-            {isHost ? 'Starting next round…' : 'Waiting for the host to advance…'}
-          </p>
+          <p className="text-center text-xs text-neutral-500 animate-pulse">Starting next round…</p>
         </main>
       </div>
     )

@@ -155,9 +155,16 @@ export async function resetRoomForRematch(code: string, passage: string): Promis
  * Advance an Elimination Rounds tournament: mark a player eliminated,
  * bump the round counter, and seed a fresh passage/start time for the
  * next round. Progress rows are cleared so the next round starts clean.
+ *
+ * Any surviving player's client may call this (not just the host) so the
+ * tournament doesn't stall if the host is the one eliminated, or their
+ * tab is slow/backgrounded. `expectedRound` guards against duplicate
+ * advances if more than one client races to call this simultaneously —
+ * the update only applies if the room is still on that round.
  */
 export async function advanceEliminationRound(
   code: string,
+  expectedRound: number,
   eliminatedIds: string[],
   nextPassage: string,
 ): Promise<void> {
@@ -170,6 +177,7 @@ export async function advanceEliminationRound(
       round_number: eliminatedIds.length + 1,
     })
     .eq('code', code)
+    .eq('round_number', expectedRound)
   if (roomError) throw roomError
 
   const { error: progressError } = await supabase.from('race_progress').delete().eq('room_code', code)
