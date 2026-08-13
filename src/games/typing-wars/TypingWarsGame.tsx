@@ -8,7 +8,7 @@ type Screen = 'setup' | 'typing' | 'results' | 'history'
 
 export default function TypingWarsGame({ onExit }: { onExit: () => void }) {
   const [screen, setScreen] = useState<Screen>('setup')
-  const [config, setConfig] = useState<TestConfig>({ blind: false, noBackspace: false })
+  const [config, setConfig] = useState<TestConfig>({ noBackspace: false })
   const [lastResult, setLastResult] = useState<AttemptResult | null>(null)
   const [attempts, setAttempts] = useState<AttemptResult[]>(() => loadAttempts())
 
@@ -135,12 +135,6 @@ function SetupScreen({
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-6">
         <div className="grid sm:grid-cols-2 gap-3">
           <ModeToggle
-            label="Blind Mode"
-            description="Complete this test without looking at your keyboard."
-            checked={config.blind}
-            onChange={(v) => setConfig({ ...config, blind: v })}
-          />
-          <ModeToggle
             label="No Backspace"
             description="Corrections are recorded, not applied."
             checked={config.noBackspace}
@@ -148,7 +142,7 @@ function SetupScreen({
           />
         </div>
 
-        {(config.blind || config.noBackspace) && (
+        {config.noBackspace && (
           <div className="text-sm text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-xl px-4 py-2.5">
             Mode: <span className="font-semibold">{modeLabel(config)}</span> — the ultimate bragging-rights test.
           </div>
@@ -291,9 +285,6 @@ function TypingScreen({
           <Stat label="Accuracy" value={`${liveAccuracy}%`} />
         </div>
         <div className="flex gap-2">
-          {config.blind && (
-            <span className="px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-300 text-xs font-medium">Blind</span>
-          )}
           {config.noBackspace && (
             <span className="px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-300 text-xs font-medium">
               No Backspace

@@ -61,8 +61,6 @@ export function scoreAttempt(params: {
 }
 
 export function modeLabel(config: TestConfig): string {
-  if (config.blind && config.noBackspace) return 'Blind + No Backspace'
-  if (config.blind) return 'Blind'
   if (config.noBackspace) return 'No Backspace'
   return 'Standard'
 }

@@ -20,6 +20,21 @@ body {
   background: rgba(124, 92, 255, 0.35);
 }
 
+button:not(:disabled),
+a,
+[role='button'],
+input[type='checkbox'],
+input[type='radio'],
+select,
+summary,
+[onclick] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 .font-mono-test {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }

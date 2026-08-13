@@ -133,7 +133,7 @@ function RoundScreen({
       backspaces: backspaces.current,
       deletes: 0,
       correctionAttempts: correctionAttempts.current,
-      config: { blind: mode.blind, noBackspace: mode.noBackspace },
+      config: { noBackspace: mode.noBackspace },
     })
 
     await finishRace(selfId, {

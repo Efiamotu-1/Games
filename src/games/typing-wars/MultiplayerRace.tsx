@@ -88,7 +88,7 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
       backspaces: backspaces.current,
       deletes: 0,
       correctionAttempts: correctionAttempts.current,
-      config: { blind: mode.blind, noBackspace: mode.noBackspace },
+      config: { noBackspace: mode.noBackspace },
     })
     await finishRace(selfId, {
       wpm: 0,
@@ -125,7 +125,7 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
       backspaces: backspaces.current,
       deletes: 0,
       correctionAttempts: correctionAttempts.current,
-      config: { blind: mode.blind, noBackspace: mode.noBackspace },
+      config: { noBackspace: mode.noBackspace },
     })
 
     saveAttempt(result)
@@ -225,11 +225,6 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
           Typing Wars
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {mode.blind && (
-            <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 text-[10px] font-medium">
-              Blind
-            </span>
-          )}
           {mode.noPeek && (
             <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 text-[10px] font-medium">
               No Peek
@@ -422,14 +417,9 @@ function RaceResults({
               🏆 {winner.player.nickname} wins{winner.player.id === selfId ? " — that's you!" : ''}
             </h1>
           )}
-          {(mode.blind || mode.noPeek || mode.noBackspace || mode.suddenDeath) && (
+          {(mode.noPeek || mode.noBackspace || mode.suddenDeath) && (
             <p className="text-xs text-neutral-500">
-              {[
-                mode.blind && 'Blind',
-                mode.noPeek && 'No Peek',
-                mode.noBackspace && 'No Backspace',
-                mode.suddenDeath && 'Sudden Death',
-              ]
+              {[mode.noPeek && 'No Peek', mode.noBackspace && 'No Backspace', mode.suddenDeath && 'Sudden Death']
                 .filter(Boolean)
                 .join(' + ')}
             </p>

@@ -5,7 +5,7 @@ import { MAX_ROUND_SECONDS, MIN_ROUND_SECONDS, toRaceMode } from './types'
 export default function TypingWarsModePicker({ mode, onChange, disabled }: ModePickerProps) {
   const current: RaceMode = toRaceMode(mode)
 
-  function toggle(key: 'noBackspace' | 'blind' | 'noPeek' | 'suddenDeath' | 'eliminationRounds') {
+  function toggle(key: 'noBackspace' | 'noPeek' | 'suddenDeath' | 'eliminationRounds') {
     if (disabled) return
     onChange({ ...current, [key]: !current[key] })
   }
@@ -21,14 +21,13 @@ export default function TypingWarsModePicker({ mode, onChange, disabled }: ModeP
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <ModeToggle
           label="No Backspace"
           checked={current.noBackspace}
           disabled={disabled}
           onClick={() => toggle('noBackspace')}
         />
-        <ModeToggle label="Blind" checked={current.blind} disabled={disabled} onClick={() => toggle('blind')} />
         <ModeToggle label="No Peek" checked={current.noPeek} disabled={disabled} onClick={() => toggle('noPeek')} />
         <ModeToggle
           label="Sudden Death"
@@ -43,10 +42,11 @@ export default function TypingWarsModePicker({ mode, onChange, disabled }: ModeP
           onClick={() => toggle('eliminationRounds')}
         />
       </div>
-      <p className="text-xs text-neutral-500">
-        {current.blind && 'Blind: type without looking at your keyboard (passage stays visible). '}
-        {current.noPeek && 'No Peek: passage is hidden — hold the button to reveal it while typing.'}
-      </p>
+      {current.noPeek && (
+        <p className="text-xs text-neutral-500">
+          No Peek: passage is hidden — hold the button to reveal it while typing.
+        </p>
+      )}
 
       {current.eliminationRounds && (
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-3 space-y-2">
