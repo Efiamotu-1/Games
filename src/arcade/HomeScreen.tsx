@@ -7,18 +7,18 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ onPlaySolo, onPlayWithFriends }: HomeScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-4xl flex items-center justify-between mb-10">
-        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-4xl flex items-center justify-between mb-6 sm:mb-10">
+        <div className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-tight">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
           Party Arcade
         </div>
       </header>
 
-      <main className="w-full max-w-4xl flex-1 space-y-8">
+      <main className="w-full max-w-4xl flex-1 space-y-6 sm:space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">We&apos;re bored. Open Party Arcade.</h1>
-          <p className="text-neutral-400">Pick a game, invite friends, and keep score.</p>
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">We&apos;re bored. Open Party Arcade.</h1>
+          <p className="text-sm sm:text-base text-neutral-400">Pick a game, invite friends, and keep score.</p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -67,7 +67,7 @@ export default function HomeScreen({ onPlaySolo, onPlayWithFriends }: HomeScreen
         </div>
       </main>
 
-      <footer className="text-xs text-neutral-500 mt-16">
+      <footer className="text-xs text-neutral-500 mt-10 sm:mt-16">
         Open → Join → Play.
       </footer>
     </div>

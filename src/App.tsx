@@ -1,72 +1,71 @@
-import { useState } from 'react'
 import HomeScreen from './arcade/HomeScreen'
 import LobbyScreen from './arcade/LobbyScreen'
 import { GAMES } from './games/registry'
 import { useRoom } from './shared/useRoom'
-
-type Stage = 'home' | 'solo' | 'lobby' | 'multiplayer'
-
-function readInviteFromUrl(): { gameId: string; roomCode: string } | null {
-  const params = new URLSearchParams(window.location.search)
-  const gameId = params.get('game')
-  const roomCode = params.get('room')
-  if (!gameId || !roomCode) return null
-  if (!GAMES.some((g) => g.id === gameId && g.available)) return null
-  return { gameId, roomCode: roomCode.toUpperCase() }
-}
+import { useRouter } from './shared/router'
+import { getOrCreatePlayerId } from './shared/identity'
 
 export default function App() {
-  const invite = useState(() => readInviteFromUrl())[0]
-  const [stage, setStage] = useState<Stage>(invite ? 'lobby' : 'home')
-  const [activeGameId, setActiveGameId] = useState<string | null>(invite?.gameId ?? null)
-  const [roomCode, setRoomCode] = useState<string | null>(null)
-  const [selfId, setSelfId] = useState<string | null>(null)
+  const { route, navigate } = useRouter()
 
-  const activeGame = GAMES.find((g) => g.id === activeGameId)
-  const room = useRoom(stage === 'multiplayer' ? roomCode : null)
-
-  function playSolo(gameId: string) {
-    setActiveGameId(gameId)
-    setStage('solo')
+  function goHome() {
+    navigate({ name: 'home' })
   }
 
-  function playWithFriends(gameId: string) {
-    setActiveGameId(gameId)
-    setStage('lobby')
+  if (route.name === 'solo') {
+    const game = GAMES.find((g) => g.id === route.gameId)
+    if (game?.soloComponent) {
+      const SoloComponent = game.soloComponent
+      return <SoloComponent onExit={goHome} />
+    }
+    goHome()
+    return null
   }
 
-  function exitToHome() {
-    setActiveGameId(null)
-    setRoomCode(null)
-    setSelfId(null)
-    setStage('home')
-    window.history.replaceState(null, '', window.location.pathname)
-  }
-
-  if (stage === 'solo' && activeGame?.soloComponent) {
-    const SoloComponent = activeGame.soloComponent
-    return <SoloComponent onExit={exitToHome} />
-  }
-
-  if (stage === 'lobby' && activeGame) {
+  if (route.name === 'lobby') {
+    const game = GAMES.find((g) => g.id === route.gameId)
+    if (!game) {
+      goHome()
+      return null
+    }
     return (
       <LobbyScreen
-        game={activeGame}
-        prefillRoomCode={invite?.gameId === activeGame.id ? invite.roomCode : null}
-        onStart={(id) => {
-          setSelfId(id)
-          setStage('multiplayer')
-        }}
-        onExit={exitToHome}
-        onRoomCreated={setRoomCode}
+        game={game}
+        prefillRoomCode={route.roomCode}
+        onRoomReady={(roomCode) =>
+          navigate({ name: 'lobby', gameId: game.id, roomCode }, { replace: true })
+        }
+        onStart={(roomCode) => navigate({ name: 'play', gameId: game.id, roomCode })}
+        onExit={goHome}
       />
     )
   }
 
-  if (stage === 'multiplayer' && activeGame?.multiplayerComponent && room && selfId) {
-    const MultiplayerComponent = activeGame.multiplayerComponent
-    return <MultiplayerComponent room={room} selfId={selfId} onExit={exitToHome} />
+  if (route.name === 'play') {
+    return <PlayScreen gameId={route.gameId} roomCode={route.roomCode} onExit={goHome} />
   }
 
-  return <HomeScreen onPlaySolo={playSolo} onPlayWithFriends={playWithFriends} />
+  return (
+    <HomeScreen
+      onPlaySolo={(gameId) => navigate({ name: 'solo', gameId })}
+      onPlayWithFriends={(gameId) => navigate({ name: 'lobby', gameId, roomCode: null })}
+    />
+  )
+}
+
+function PlayScreen({ gameId, roomCode, onExit }: { gameId: string; roomCode: string; onExit: () => void }) {
+  const game = GAMES.find((g) => g.id === gameId)
+  const room = useRoom(roomCode)
+  const selfId = getOrCreatePlayerId(roomCode)
+
+  if (!game?.multiplayerComponent || !room) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <p className="text-neutral-400 animate-pulse">Loading…</p>
+      </div>
+    )
+  }
+
+  const MultiplayerComponent = game.multiplayerComponent
+  return <MultiplayerComponent room={room} selfId={selfId} onExit={onExit} />
 }

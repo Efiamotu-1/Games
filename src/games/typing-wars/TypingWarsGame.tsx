@@ -24,13 +24,13 @@ export default function TypingWarsGame({ onExit }: { onExit: () => void }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-3xl flex items-center justify-between mb-10">
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-3xl flex items-center justify-between gap-3 mb-6 sm:mb-10">
         <button
           onClick={onExit}
-          className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+          className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-tight"
         >
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
           Typing Wars
         </button>
         <nav className="flex gap-1 text-sm">
@@ -136,7 +136,7 @@ function SetupScreen({
         <div className="grid sm:grid-cols-2 gap-3">
           <ModeToggle
             label="Blind Mode"
-            description="Type without watching your input."
+            description="Complete this test without looking at your keyboard."
             checked={config.blind}
             onChange={(v) => setConfig({ ...config, blind: v })}
           />
@@ -310,9 +310,8 @@ function TypingScreen({
       </div>
 
       <div
-        className={`relative rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-xl leading-relaxed font-mono-test select-none ${
-          config.blind ? 'blur-md hover:blur-none focus-within:blur-none transition-all duration-300' : ''
-        }`}
+        onClick={() => inputRef.current?.focus()}
+        className="relative rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-6 text-base sm:text-xl leading-relaxed font-mono-test select-none cursor-text"
       >
         {target.split('').map((char, i) => {
           let cls = 'text-neutral-500'
@@ -327,23 +326,22 @@ function TypingScreen({
             </span>
           )
         })}
+        <input
+          ref={inputRef}
+          value={typed}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={() => inputRef.current?.focus()}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+          autoFocus
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="off"
+        />
       </div>
 
-      <input
-        ref={inputRef}
-        value={typed}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onBlur={() => inputRef.current?.focus()}
-        className="absolute opacity-0 pointer-events-none"
-        autoFocus
-        spellCheck={false}
-        autoComplete="off"
-        autoCapitalize="off"
-      />
-
       <p className="text-center text-xs text-neutral-500">
-        Click the text and start typing — the timer begins on your first keystroke.
+        Tap the text and start typing — the timer begins on your first keystroke.
       </p>
     </div>
   )
@@ -411,7 +409,7 @@ function ResultsScreen({
         <p>WPM methodology: (correct chars ÷ 5) ÷ elapsed minutes</p>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={copy}
           className="flex-1 py-3 rounded-xl border border-neutral-700 hover:border-neutral-500 transition-colors text-sm font-medium"

@@ -6,6 +6,7 @@ export interface TestConfig {
 export interface RaceMode {
   noBackspace: boolean
   blind: boolean
+  noPeek: boolean
   suddenDeath: boolean
   eliminationRounds: boolean
   roundSeconds: number
@@ -18,6 +19,7 @@ export const MAX_ROUND_SECONDS = 600
 export const DEFAULT_RACE_MODE: RaceMode = {
   noBackspace: false,
   blind: false,
+  noPeek: false,
   suddenDeath: false,
   eliminationRounds: false,
   roundSeconds: DEFAULT_ROUND_SECONDS,
@@ -32,6 +34,7 @@ export function toRaceMode(mode: Record<string, unknown>): RaceMode {
   return {
     noBackspace: mode.noBackspace === true,
     blind: mode.blind === true,
+    noPeek: mode.noPeek === true,
     suddenDeath: mode.suddenDeath === true,
     eliminationRounds: mode.eliminationRounds === true,
     roundSeconds,

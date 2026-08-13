@@ -1,57 +1,64 @@
 import { useEffect, useState } from 'react'
 import type { GameDefinition } from '../games/registry'
-import { makePlayerId } from '../shared/room'
+import { getOrCreatePlayerId, savePlayerId, clearPlayerId, newPlayerId } from '../shared/identity'
 import { createRoomOnServer, joinRoomOnServer, leaveRoom, setPlayerReady, setRoomMode, startRace } from '../shared/roomApi'
 import { useRoom } from '../shared/useRoom'
+import RoomLeaderboard from './RoomLeaderboard'
 
 interface LobbyScreenProps {
   game: GameDefinition
   prefillRoomCode: string | null
-  onStart: (selfId: string) => void
+  onRoomReady: (roomCode: string) => void
+  onStart: (roomCode: string) => void
   onExit: () => void
-  onRoomCreated: (roomCode: string) => void
 }
 
-export default function LobbyScreen({ game, prefillRoomCode, onStart, onExit, onRoomCreated }: LobbyScreenProps) {
-  const [selfId] = useState(() => makePlayerId())
-  const [roomCode, setRoomCode] = useState<string | null>(null)
-  const room = useRoom(roomCode)
+export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStart, onExit }: LobbyScreenProps) {
+  const room = useRoom(prefillRoomCode)
+  const selfId = prefillRoomCode ? getOrCreatePlayerId(prefillRoomCode) : null
 
   useEffect(() => {
+    if (!selfId) return
+    const currentSelfId = selfId
     function handleUnload() {
-      leaveRoom(selfId).catch(() => {})
+      leaveRoom(currentSelfId).catch(() => {})
     }
     window.addEventListener('beforeunload', handleUnload)
     return () => window.removeEventListener('beforeunload', handleUnload)
   }, [selfId])
 
   useEffect(() => {
-    if (room?.status === 'in-game') {
-      onStart(selfId)
+    if (room?.status === 'in-game' && prefillRoomCode) {
+      onStart(prefillRoomCode)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.status])
 
   function handleExit() {
-    if (selfId) leaveRoom(selfId).catch(() => {})
+    if (selfId) {
+      leaveRoom(selfId).catch(() => {})
+      if (prefillRoomCode) clearPlayerId(prefillRoomCode)
+    }
     onExit()
   }
 
-  if (!room) {
+  if (!prefillRoomCode || !room || !selfId) {
     return (
       <JoinScreen
         game={game}
         prefillRoomCode={prefillRoomCode}
         onExit={onExit}
         onCreateRoom={async (nickname) => {
-          const created = await createRoomOnServer(game.id, selfId, nickname || 'Host')
-          setRoomCode(created.code)
-          onRoomCreated(created.code)
+          const id = newPlayerId()
+          const created = await createRoomOnServer(game.id, id, nickname || 'Host')
+          savePlayerId(created.code, id)
+          onRoomReady(created.code)
         }}
         onJoinRoom={async (code, nickname) => {
-          const joined = await joinRoomOnServer(code.toUpperCase(), selfId, nickname || 'Player')
-          setRoomCode(joined.code)
-          onRoomCreated(joined.code)
+          const upperCode = code.toUpperCase()
+          const id = getOrCreatePlayerId(upperCode)
+          await joinRoomOnServer(upperCode, id, nickname || 'Player')
+          onRoomReady(upperCode)
         }}
       />
     )
@@ -61,7 +68,7 @@ export default function LobbyScreen({ game, prefillRoomCode, onStart, onExit, on
   const self = currentRoom.players.find((p) => p.id === selfId)
   const allReady = currentRoom.players.length >= game.minPlayers && currentRoom.players.every((p) => p.ready)
   const ModePicker = game.modePickerComponent
-  const inviteUrl = `${window.location.origin}${window.location.pathname}?game=${game.id}&room=${room.code}`
+  const inviteUrl = `${window.location.origin}/play/${game.id}/lobby?room=${room.code}`
 
   async function toggleReady() {
     if (!self) return
@@ -71,30 +78,30 @@ export default function LobbyScreen({ game, prefillRoomCode, onStart, onExit, on
   async function startGame() {
     const payload = game.getStartPayload?.() ?? ''
     await startRace(currentRoom.code, payload)
-    onStart(selfId)
+    onStart(currentRoom.code)
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-2xl flex items-center justify-between mb-10">
-        <button onClick={handleExit} className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-2xl flex items-center justify-between mb-6 sm:mb-10">
+        <button onClick={handleExit} className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-tight">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
           {game.name}
         </button>
         <button onClick={handleExit} className="text-sm text-neutral-500 hover:text-neutral-300">
-          Leave room
+          ← Leave room
         </button>
       </header>
 
-      <main className="w-full max-w-2xl flex-1 space-y-6 animate-pop-in">
+      <main className="w-full max-w-2xl flex-1 space-y-5 sm:space-y-6 animate-pop-in">
         <div className="text-center space-y-3">
           <p className="text-xs uppercase tracking-widest text-neutral-500">Room code</p>
-          <p className="text-5xl font-bold tracking-[0.2em] text-violet-300">{room.code}</p>
+          <p className="text-4xl sm:text-5xl font-bold tracking-[0.2em] text-violet-300">{room.code}</p>
           <InviteLinkButton url={inviteUrl} />
         </div>
 
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <p className="text-sm font-medium text-neutral-300">
               Players ({room.players.length}/{game.maxPlayers})
             </p>
@@ -106,22 +113,22 @@ export default function LobbyScreen({ game, prefillRoomCode, onStart, onExit, on
             {room.players.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 sm:px-4 py-3"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <span
                     className="w-3 h-3 rounded-full shrink-0"
                     style={{ backgroundColor: p.color, boxShadow: `0 0 8px 1px ${p.color}66` }}
                   />
-                  <span className="font-medium">{p.nickname}</span>
+                  <span className="font-medium truncate">{p.nickname}</span>
                   {p.isHost && (
-                    <span className="text-[10px] uppercase tracking-wide text-amber-300/80 border border-amber-400/25 rounded-full px-2 py-0.5">
+                    <span className="text-[10px] uppercase tracking-wide text-amber-300/80 border border-amber-400/25 rounded-full px-2 py-0.5 shrink-0">
                       Host
                     </span>
                   )}
                 </div>
                 <span
-                  className={`text-xs font-medium ${p.ready ? 'text-emerald-400' : 'text-neutral-500'}`}
+                  className={`text-xs font-medium shrink-0 ml-2 ${p.ready ? 'text-emerald-400' : 'text-neutral-500'}`}
                 >
                   {p.ready ? 'Ready' : 'Not ready'}
                 </span>
@@ -131,7 +138,7 @@ export default function LobbyScreen({ game, prefillRoomCode, onStart, onExit, on
         </div>
 
         {ModePicker && (
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-5">
             <p className="text-sm font-medium text-neutral-300 mb-3">
               Mode {!self?.isHost && <span className="text-neutral-500 font-normal">(set by host)</span>}
             </p>
@@ -171,6 +178,8 @@ export default function LobbyScreen({ game, prefillRoomCode, onStart, onExit, on
                 : 'Waiting for everyone to be ready'}
           </button>
         )}
+
+        <RoomLeaderboard roomCode={room.code} />
       </main>
     </div>
   )
@@ -236,11 +245,14 @@ function JoinScreen({
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-md flex items-center justify-between mb-10">
-        <button onClick={onExit} className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-md flex items-center justify-between mb-6 sm:mb-10">
+        <button onClick={onExit} className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-tight">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
           {game.name}
+        </button>
+        <button onClick={onExit} className="text-sm text-neutral-500 hover:text-neutral-300">
+          ← Back
         </button>
       </header>
 

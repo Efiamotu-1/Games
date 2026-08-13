@@ -11,8 +11,11 @@ import {
   updateRaceProgress,
 } from '../../shared/roomApi'
 import { useRaceProgress } from '../../shared/useRaceProgress'
+import { saveTournamentLeaderboardEntry } from '../../shared/roomLeaderboard'
+import RoomLeaderboard from '../../arcade/RoomLeaderboard'
 import { getRandomPassage } from './passages'
 import { toRaceMode, type RaceMode } from './types'
+import PeekablePassage from './PeekablePassage'
 
 interface EliminationTournamentProps {
   room: Room
@@ -260,11 +263,11 @@ function RoundScreen({
   const liveWpm = typed.length > 0 ? Math.round(typed.length / 5 / Math.max(elapsed / 60, 1 / 600)) : 0
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-3xl flex items-center justify-between mb-8">
-        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
-          Elimination Round {room.roundNumber}
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-3xl flex items-center justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
+        <div className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-tight">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
+          Round {room.roundNumber}
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[10px] font-medium">
@@ -275,14 +278,14 @@ function RoundScreen({
               leaveRoom(selfId).catch(() => {})
               onExit()
             }}
-            className="text-xs text-neutral-500 hover:text-neutral-300 ml-2"
+            className="text-xs text-neutral-500 hover:text-neutral-300 ml-1 sm:ml-2"
           >
             Leave
           </button>
         </div>
       </header>
 
-      <main className="w-full max-w-3xl flex-1 space-y-6 animate-pop-in">
+      <main className="w-full max-w-3xl flex-1 space-y-5 sm:space-y-6 animate-pop-in">
         <div className="flex items-center justify-between text-sm">
           <div className="flex gap-4">
             <Stat label="Time left" value={`${Math.ceil(timeLeft)}s`} warn={timeLeft <= 10} />
@@ -315,24 +318,26 @@ function RoundScreen({
           })}
         </div>
 
-        <div
-          className={`relative rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-xl leading-relaxed font-mono-test select-none ${
-            mode.blind ? 'blur-md hover:blur-none focus-within:blur-none transition-all duration-300' : ''
-          }`}
-        >
-          {target.split('').map((char, i) => {
-            let cls = 'text-neutral-500'
-            if (i < typed.length) {
-              cls = typed[i] === char ? 'text-emerald-400' : 'text-rose-400 bg-rose-500/15 rounded'
-            } else if (i === typed.length) {
-              cls = 'text-neutral-200 border-b-2 border-violet-400 caret'
-            }
-            return (
-              <span key={i} className={cls}>
-                {char}
-              </span>
-            )
-          })}
+        <div onClick={() => inputRef.current?.focus()} className="cursor-text">
+          {mode.noPeek ? (
+            <PeekablePassage target={target} typed={typed} />
+          ) : (
+            <div className="relative rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-6 text-base sm:text-xl leading-relaxed font-mono-test select-none">
+              {target.split('').map((char, i) => {
+                let cls = 'text-neutral-500'
+                if (i < typed.length) {
+                  cls = typed[i] === char ? 'text-emerald-400' : 'text-rose-400 bg-rose-500/15 rounded'
+                } else if (i === typed.length) {
+                  cls = 'text-neutral-200 border-b-2 border-violet-400 caret'
+                }
+                return (
+                  <span key={i} className={cls}>
+                    {char}
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <input
@@ -341,7 +346,7 @@ function RoundScreen({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={() => inputRef.current?.focus()}
-          className="absolute opacity-0 pointer-events-none"
+          className="absolute opacity-0 w-px h-px"
           autoFocus
           spellCheck={false}
           autoComplete="off"
@@ -373,11 +378,11 @@ function SpectatorView({
   const survivors = room.players.filter((p) => !room.eliminatedIds.includes(p.id))
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-3xl flex items-center justify-between mb-8">
-        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-600" />
-          Eliminated — Spectating Round {room.roundNumber}
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-3xl flex items-center justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
+        <div className="flex items-center gap-2 text-sm sm:text-lg font-semibold tracking-tight">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-neutral-600 shrink-0" />
+          Spectating Round {room.roundNumber}
         </div>
         <button
           onClick={() => {
@@ -414,7 +419,7 @@ function SpectatorView({
             )
           })}
         </div>
-        {mode.blind && <p className="text-center text-xs text-neutral-600">(Passage hidden — blind mode)</p>}
+        {mode.noPeek && <p className="text-center text-xs text-neutral-600">(Passages stay hidden while spectating)</p>}
       </main>
     </div>
   )
@@ -428,8 +433,29 @@ function FinishingUp({ room, selfId, winner }: { room: Room; selfId: string; win
   useEffect(() => {
     if (!isHost || advancing.current || room.status === 'finished') return
     advancing.current = true
-    finishTournament(room.code).catch(() => {})
-  }, [isHost, room.code, room.status])
+    ;(async () => {
+      const placements = [
+        ...(winner ? [winner] : []),
+        ...[...room.eliminatedIds].reverse().map((id) => room.players.find((p) => p.id === id)).filter(Boolean),
+      ] as Room['players']
+
+      await Promise.all(
+        placements.map((p, i) =>
+          saveTournamentLeaderboardEntry({
+            roomCode: room.code,
+            gameId: room.gameId,
+            playerId: p.id,
+            nickname: p.nickname,
+            placement: i + 1,
+            roundsPlayed: room.roundNumber,
+            mode: room.mode,
+          }).catch(() => {}),
+        ),
+      )
+
+      await finishTournament(room.code)
+    })()
+  }, [isHost, room.code, room.status, room.eliminatedIds, room.players, room.gameId, room.mode, room.roundNumber, winner])
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 text-center">
@@ -472,12 +498,12 @@ function TournamentResults({ room, selfId, onExit }: { room: Room; selfId: strin
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
       <main className="w-full max-w-2xl flex-1 space-y-6 animate-pop-in">
         <div className="text-center space-y-2">
           <p className="text-sm text-neutral-500 uppercase tracking-widest">Tournament Results</p>
           {winner && (
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
               🏆 {winner.nickname} is the champion{winner.id === selfId ? " — that's you!" : ''}
             </h1>
           )}
@@ -503,7 +529,9 @@ function TournamentResults({ room, selfId, onExit }: { room: Room; selfId: strin
           ))}
         </div>
 
-        <div className="flex gap-3">
+        <RoomLeaderboard roomCode={room.code} />
+
+        <div className="flex flex-col sm:flex-row gap-3">
           {isHost && (
             <button
               onClick={rematch}

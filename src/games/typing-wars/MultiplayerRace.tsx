@@ -10,9 +10,12 @@ import {
   updateRaceProgress,
 } from '../../shared/roomApi'
 import { useRaceProgress } from '../../shared/useRaceProgress'
+import { saveRaceLeaderboardEntry } from '../../shared/roomLeaderboard'
+import RoomLeaderboard from '../../arcade/RoomLeaderboard'
 import { getRandomPassage } from './passages'
 import { toRaceMode, type RaceMode } from './types'
 import EliminationTournament from './EliminationTournament'
+import PeekablePassage from './PeekablePassage'
 
 interface MultiplayerRaceProps {
   room: Room
@@ -127,6 +130,17 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
 
     saveAttempt(result)
 
+    const self = room.players.find((p) => p.id === selfId)
+    saveRaceLeaderboardEntry({
+      roomCode: room.code,
+      gameId: room.gameId,
+      playerId: selfId,
+      nickname: self?.nickname ?? 'Player',
+      wpm: result.wpm,
+      accuracyChar: result.accuracyChar,
+      mode: room.mode,
+    }).catch(() => {})
+
     await finishRace(selfId, {
       wpm: result.wpm,
       rawWpm: result.rawWpm,
@@ -204,16 +218,21 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
-      <header className="w-full max-w-3xl flex items-center justify-between mb-8">
-        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+      <header className="w-full max-w-3xl flex items-center justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
+        <div className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-tight">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
           Typing Wars
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {mode.blind && (
             <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 text-[10px] font-medium">
               Blind
+            </span>
+          )}
+          {mode.noPeek && (
+            <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 text-[10px] font-medium">
+              No Peek
             </span>
           )}
           {mode.noBackspace && (
@@ -231,16 +250,16 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
               leaveRoom(selfId).catch(() => {})
               onExit()
             }}
-            className="text-xs text-neutral-500 hover:text-neutral-300 ml-2"
+            className="text-xs text-neutral-500 hover:text-neutral-300 ml-1 sm:ml-2"
           >
             Leave race
           </button>
         </div>
       </header>
 
-      <main className="w-full max-w-3xl flex-1 space-y-6 animate-pop-in">
+      <main className="w-full max-w-3xl flex-1 space-y-5 sm:space-y-6 animate-pop-in">
         <div className="flex items-center justify-between text-sm">
-          <div className="flex gap-4">
+          <div className="flex gap-3 sm:gap-4">
             <Stat label="Time" value={`${elapsed.toFixed(1)}s`} />
             <Stat label="WPM" value={String(liveWpm)} />
             <Stat label="Accuracy" value={`${liveAccuracy}%`} />
@@ -272,24 +291,26 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
           })}
         </div>
 
-        <div
-          className={`relative rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-xl leading-relaxed font-mono-test select-none ${
-            mode.blind ? 'blur-md hover:blur-none focus-within:blur-none transition-all duration-300' : ''
-          }`}
-        >
-          {target.split('').map((char, i) => {
-            let cls = 'text-neutral-500'
-            if (i < typed.length) {
-              cls = typed[i] === char ? 'text-emerald-400' : 'text-rose-400 bg-rose-500/15 rounded'
-            } else if (i === typed.length) {
-              cls = 'text-neutral-200 border-b-2 border-violet-400 caret'
-            }
-            return (
-              <span key={i} className={cls}>
-                {char}
-              </span>
-            )
-          })}
+        <div onClick={() => inputRef.current?.focus()} className="cursor-text">
+          {mode.noPeek ? (
+            <PeekablePassage target={target} typed={typed} />
+          ) : (
+            <div className="relative rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-6 text-base sm:text-xl leading-relaxed font-mono-test select-none">
+              {target.split('').map((char, i) => {
+                let cls = 'text-neutral-500'
+                if (i < typed.length) {
+                  cls = typed[i] === char ? 'text-emerald-400' : 'text-rose-400 bg-rose-500/15 rounded'
+                } else if (i === typed.length) {
+                  cls = 'text-neutral-200 border-b-2 border-violet-400 caret'
+                }
+                return (
+                  <span key={i} className={cls}>
+                    {char}
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <input
@@ -298,7 +319,7 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={() => inputRef.current?.focus()}
-          className="absolute opacity-0 pointer-events-none"
+          className="absolute opacity-0 w-px h-px"
           autoFocus
           spellCheck={false}
           autoComplete="off"
@@ -392,18 +413,23 @@ function RaceResults({
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10">
+    <div className="min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
       <main className="w-full max-w-2xl flex-1 space-y-6 animate-pop-in">
         <div className="text-center space-y-2">
           <p className="text-sm text-neutral-500 uppercase tracking-widest">Race Results</p>
           {winner && (
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
               🏆 {winner.player.nickname} wins{winner.player.id === selfId ? " — that's you!" : ''}
             </h1>
           )}
-          {(mode.blind || mode.noBackspace || mode.suddenDeath) && (
+          {(mode.blind || mode.noPeek || mode.noBackspace || mode.suddenDeath) && (
             <p className="text-xs text-neutral-500">
-              {[mode.blind && 'Blind', mode.noBackspace && 'No Backspace', mode.suddenDeath && 'Sudden Death']
+              {[
+                mode.blind && 'Blind',
+                mode.noPeek && 'No Peek',
+                mode.noBackspace && 'No Backspace',
+                mode.suddenDeath && 'Sudden Death',
+              ]
                 .filter(Boolean)
                 .join(' + ')}
             </p>
@@ -448,7 +474,9 @@ function RaceResults({
           </div>
         )}
 
-        <div className="flex gap-3">
+        <RoomLeaderboard roomCode={room.code} />
+
+        <div className="flex flex-col sm:flex-row gap-3">
           {selfResult && (
             <button
               onClick={copyShare}
