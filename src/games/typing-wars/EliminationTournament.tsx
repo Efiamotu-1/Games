@@ -16,6 +16,7 @@ import RoomLeaderboard from '../../arcade/RoomLeaderboard'
 import { getRandomPassage } from './passages'
 import { toRaceMode, type RaceMode } from './types'
 import PeekablePassage from './PeekablePassage'
+import RaceCountdown, { isCountingDown } from './RaceCountdown'
 
 interface EliminationTournamentProps {
   room: Room
@@ -30,6 +31,7 @@ export default function EliminationTournament({ room, selfId, onExit }: Eliminat
   const target = room.passage ?? ''
   const survivors = room.players.filter((p) => !room.eliminatedIds.includes(p.id))
   const selfEliminated = room.eliminatedIds.includes(selfId)
+  const [, forceTick] = useState(0)
 
   if (room.status === 'finished') {
     return <TournamentResults room={room} selfId={selfId} onExit={onExit} />
@@ -47,13 +49,23 @@ export default function EliminationTournament({ room, selfId, onExit }: Eliminat
     return <FinishingUp room={room} selfId={selfId} winner={survivors[0] ?? null} />
   }
 
+  if (isCountingDown(room.startedAt)) {
+    return (
+      <RaceCountdown
+        startedAt={room.startedAt}
+        label={`Round ${room.roundNumber} starting`}
+        onDone={() => forceTick((n) => n + 1)}
+      />
+    )
+  }
+
   if (selfEliminated) {
     return <SpectatorView room={room} mode={mode} target={target} selfId={selfId} onExit={onExit} />
   }
 
   return (
     <RoundScreen
-      key={room.roundNumber}
+      key={`${room.roundNumber}-${room.startedAt}`}
       room={room}
       selfId={selfId}
       mode={mode}
@@ -351,6 +363,7 @@ function RoundScreen({
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
+          autoCorrect="off"
         />
 
         <div className="h-1 rounded-full bg-neutral-800 overflow-hidden">

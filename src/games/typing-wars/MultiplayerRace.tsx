@@ -16,6 +16,7 @@ import { getRandomPassage } from './passages'
 import { toRaceMode, type RaceMode } from './types'
 import EliminationTournament from './EliminationTournament'
 import PeekablePassage from './PeekablePassage'
+import RaceCountdown, { isCountingDown } from './RaceCountdown'
 
 interface MultiplayerRaceProps {
   room: Room
@@ -27,6 +28,7 @@ const PROGRESS_THROTTLE_MS = 250
 
 export default function MultiplayerRace({ room, selfId, onExit }: MultiplayerRaceProps) {
   const mode = toRaceMode(room.mode)
+  const [, forceTick] = useState(0)
 
   if (mode.eliminationRounds) {
     return <EliminationTournament room={room} selfId={selfId} onExit={onExit} />
@@ -40,7 +42,13 @@ export default function MultiplayerRace({ room, selfId, onExit }: MultiplayerRac
     )
   }
 
-  return <RaceScreen room={room} selfId={selfId} onExit={onExit} />
+  if (isCountingDown(room.startedAt)) {
+    return (
+      <RaceCountdown startedAt={room.startedAt} label="Race starting" onDone={() => forceTick((n) => n + 1)} />
+    )
+  }
+
+  return <RaceScreen key={room.startedAt} room={room} selfId={selfId} onExit={onExit} />
 }
 
 function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onExit: () => void }) {
@@ -319,6 +327,7 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
+          autoCorrect="off"
         />
 
         <div className="h-1 rounded-full bg-neutral-800 overflow-hidden">

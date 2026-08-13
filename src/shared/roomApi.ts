@@ -2,6 +2,13 @@ import { supabase } from './supabase'
 import type { Player, RaceResult, Room } from './types'
 import { colorForIndex, makeRoomCode } from './room'
 
+/** Seconds between "start" being triggered and the race actually beginning, so every player sees a synced countdown. */
+export const START_COUNTDOWN_SECONDS = 3
+
+function futureStartTime(): string {
+  return new Date(Date.now() + START_COUNTDOWN_SECONDS * 1000).toISOString()
+}
+
 interface RoomRow {
   code: string
   game_id: string
@@ -128,7 +135,7 @@ export async function setRoomMode(code: string, mode: Record<string, unknown>): 
 export async function startRace(code: string, passage: string): Promise<void> {
   const { error } = await supabase
     .from('rooms')
-    .update({ status: 'in-game', passage, started_at: new Date().toISOString(), round_number: 1, eliminated_ids: [] })
+    .update({ status: 'in-game', passage, started_at: futureStartTime(), round_number: 1, eliminated_ids: [] })
     .eq('code', code)
   if (error) throw error
 }
@@ -136,7 +143,7 @@ export async function startRace(code: string, passage: string): Promise<void> {
 export async function resetRoomForRematch(code: string, passage: string): Promise<void> {
   const { error: roomError } = await supabase
     .from('rooms')
-    .update({ status: 'in-game', passage, started_at: new Date().toISOString(), round_number: 1, eliminated_ids: [] })
+    .update({ status: 'in-game', passage, started_at: futureStartTime(), round_number: 1, eliminated_ids: [] })
     .eq('code', code)
   if (roomError) throw roomError
 
@@ -159,7 +166,7 @@ export async function advanceEliminationRound(
     .update({
       eliminated_ids: eliminatedIds,
       passage: nextPassage,
-      started_at: new Date().toISOString(),
+      started_at: futureStartTime(),
       round_number: eliminatedIds.length + 1,
     })
     .eq('code', code)

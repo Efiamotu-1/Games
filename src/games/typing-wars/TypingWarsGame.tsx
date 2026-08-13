@@ -328,6 +328,7 @@ function TypingScreen({
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
+          autoCorrect="off"
         />
       </div>
 

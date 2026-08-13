@@ -42,7 +42,9 @@ export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStar
     onExit()
   }
 
-  if (!prefillRoomCode || !room || !selfId) {
+  const alreadyJoined = !!room && !!selfId && room.players.some((p) => p.id === selfId)
+
+  if (!prefillRoomCode || !room || !selfId || !alreadyJoined) {
     return (
       <JoinScreen
         game={game}
