@@ -104,12 +104,12 @@ export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStar
 
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-            <p className="text-sm font-medium text-neutral-300">
-              Players ({room.players.length}/{game.maxPlayers})
-            </p>
-            <p className="text-xs text-neutral-500">
-              {game.minPlayers}–{game.maxPlayers} players needed
-            </p>
+            <p className="text-sm font-medium text-neutral-300">Players ({room.players.length})</p>
+            {room.players.length < game.minPlayers && (
+              <p className="text-xs text-neutral-500">
+                {game.minPlayers === 1 ? 'At least 1 player needed' : `At least ${game.minPlayers} players needed`}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             {room.players.map((p) => (

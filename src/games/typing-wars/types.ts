@@ -37,6 +37,29 @@ export function toRaceMode(mode: Record<string, unknown>): RaceMode {
   }
 }
 
+export const MODE_INFO = {
+  noBackspace: {
+    label: 'No Backspace',
+    description:
+      "You can't fix mistakes. Once you type a letter, it stays — even if it's wrong. Backspace and Delete won't work during the race.",
+  },
+  noPeek: {
+    label: 'No Peek',
+    description:
+      'The text you need to type is hidden. Press and hold the "Hold to peek" button to see it, then let go to hide it again. You have to memorize as you go.',
+  },
+  suddenDeath: {
+    label: 'Sudden Death',
+    description:
+      "One typo and you're out. The moment you type a single wrong letter, you're eliminated from the race — even if it's the very first letter.",
+  },
+  eliminationRounds: {
+    label: 'Elimination Rounds',
+    description:
+      "This isn't one race — it's a tournament. Everyone races the same text with a timer. When time's up, whoever is in last place is eliminated. Everyone else races again. This repeats, one person eliminated each round, until only one winner remains.",
+  },
+} as const
+
 export interface AttemptResult {
   id: string
   timestamp: number

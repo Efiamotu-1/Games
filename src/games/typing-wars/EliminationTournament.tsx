@@ -14,9 +14,10 @@ import { useRaceProgress } from '../../shared/useRaceProgress'
 import { saveTournamentLeaderboardEntry } from '../../shared/roomLeaderboard'
 import RoomLeaderboard from '../../arcade/RoomLeaderboard'
 import { getRandomPassage } from './passages'
-import { toRaceMode, type RaceMode } from './types'
+import { toRaceMode, MODE_INFO, type RaceMode } from './types'
 import PeekablePassage from './PeekablePassage'
 import RaceCountdown, { isCountingDown } from './RaceCountdown'
+import ModeBadge from './ModeBadge'
 
 interface EliminationTournamentProps {
   room: Room
@@ -284,10 +285,21 @@ function RoundScreen({
           <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.7)]" />
           Round {room.roundNumber}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[10px] font-medium">
-            {survivors.length} left
-          </span>
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          <ModeBadge
+            label={`${survivors.length} left`}
+            description={MODE_INFO.eliminationRounds.description}
+            colorClass="bg-amber-500/15 text-amber-300"
+          />
+          {mode.noPeek && (
+            <ModeBadge label={MODE_INFO.noPeek.label} description={MODE_INFO.noPeek.description} colorClass="bg-indigo-500/15 text-indigo-300" />
+          )}
+          {mode.noBackspace && (
+            <ModeBadge label={MODE_INFO.noBackspace.label} description={MODE_INFO.noBackspace.description} colorClass="bg-rose-500/15 text-rose-300" />
+          )}
+          {mode.suddenDeath && (
+            <ModeBadge label={MODE_INFO.suddenDeath.label} description={MODE_INFO.suddenDeath.description} colorClass="bg-red-500/15 text-red-300" />
+          )}
           <button
             onClick={() => {
               leaveRoom(selfId).catch(() => {})

@@ -13,10 +13,11 @@ import { useRaceProgress } from '../../shared/useRaceProgress'
 import { saveRaceLeaderboardEntry } from '../../shared/roomLeaderboard'
 import RoomLeaderboard from '../../arcade/RoomLeaderboard'
 import { getRandomPassage } from './passages'
-import { toRaceMode, type RaceMode } from './types'
+import { toRaceMode, MODE_INFO, type RaceMode } from './types'
 import EliminationTournament from './EliminationTournament'
 import PeekablePassage from './PeekablePassage'
 import RaceCountdown, { isCountingDown } from './RaceCountdown'
+import ModeBadge from './ModeBadge'
 
 interface MultiplayerRaceProps {
   room: Room
@@ -234,19 +235,13 @@ function RaceScreen({ room, selfId, onExit }: { room: Room; selfId: string; onEx
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {mode.noPeek && (
-            <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 text-[10px] font-medium">
-              No Peek
-            </span>
+            <ModeBadge label={MODE_INFO.noPeek.label} description={MODE_INFO.noPeek.description} colorClass="bg-indigo-500/15 text-indigo-300" />
           )}
           {mode.noBackspace && (
-            <span className="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 text-[10px] font-medium">
-              No Backspace
-            </span>
+            <ModeBadge label={MODE_INFO.noBackspace.label} description={MODE_INFO.noBackspace.description} colorClass="bg-rose-500/15 text-rose-300" />
           )}
           {mode.suddenDeath && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[10px] font-medium">
-              Sudden Death
-            </span>
+            <ModeBadge label={MODE_INFO.suddenDeath.label} description={MODE_INFO.suddenDeath.description} colorClass="bg-amber-500/15 text-amber-300" />
           )}
           <button
             onClick={() => {

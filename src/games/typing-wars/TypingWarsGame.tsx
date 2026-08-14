@@ -136,7 +136,7 @@ function SetupScreen({
         <div className="grid sm:grid-cols-2 gap-3">
           <ModeToggle
             label="No Backspace"
-            description="Corrections are recorded, not applied."
+            description="You can't fix mistakes — once you type a letter it stays, even if it's wrong."
             checked={config.noBackspace}
             onChange={(v) => setConfig({ ...config, noBackspace: v })}
           />

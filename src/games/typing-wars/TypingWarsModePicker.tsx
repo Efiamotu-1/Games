@@ -1,6 +1,7 @@
 import type { ModePickerProps } from '../registry'
 import type { RaceMode } from './types'
-import { MAX_ROUND_SECONDS, MIN_ROUND_SECONDS, toRaceMode } from './types'
+import { MAX_ROUND_SECONDS, MIN_ROUND_SECONDS, MODE_INFO, toRaceMode } from './types'
+import ModeInfoButton from './ModeInfoButton'
 
 export default function TypingWarsModePicker({ mode, onChange, disabled }: ModePickerProps) {
   const current: RaceMode = toRaceMode(mode)
@@ -23,20 +24,29 @@ export default function TypingWarsModePicker({ mode, onChange, disabled }: ModeP
     <div className="space-y-3">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <ModeToggle
-          label="No Backspace"
+          label={MODE_INFO.noBackspace.label}
+          description={MODE_INFO.noBackspace.description}
           checked={current.noBackspace}
           disabled={disabled}
           onClick={() => toggle('noBackspace')}
         />
-        <ModeToggle label="No Peek" checked={current.noPeek} disabled={disabled} onClick={() => toggle('noPeek')} />
         <ModeToggle
-          label="Sudden Death"
+          label={MODE_INFO.noPeek.label}
+          description={MODE_INFO.noPeek.description}
+          checked={current.noPeek}
+          disabled={disabled}
+          onClick={() => toggle('noPeek')}
+        />
+        <ModeToggle
+          label={MODE_INFO.suddenDeath.label}
+          description={MODE_INFO.suddenDeath.description}
           checked={current.suddenDeath}
           disabled={disabled}
           onClick={() => toggle('suddenDeath')}
         />
         <ModeToggle
-          label="Elimination Rounds"
+          label={MODE_INFO.eliminationRounds.label}
+          description={MODE_INFO.eliminationRounds.description}
           checked={current.eliminationRounds}
           disabled={disabled}
           onClick={() => toggle('eliminationRounds')}
@@ -90,26 +100,34 @@ export default function TypingWarsModePicker({ mode, onChange, disabled }: ModeP
 
 function ModeToggle({
   label,
+  description,
   checked,
   disabled,
   onClick,
 }: {
   label: string
+  description: string
   checked: boolean
   disabled: boolean
   onClick: () => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`py-2.5 px-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+    <div
+      className={`relative flex items-center gap-1.5 py-2.5 px-2 rounded-xl border text-sm font-medium transition-all ${
         checked
           ? 'border-violet-400 bg-violet-500/15 text-violet-200'
           : 'border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
-      }`}
+      } ${disabled ? 'opacity-60' : ''}`}
     >
-      {label}
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className="flex-1 text-left disabled:cursor-not-allowed"
+      >
+        {label}
+      </button>
+      <ModeInfoButton title={label} description={description} />
+    </div>
   )
 }

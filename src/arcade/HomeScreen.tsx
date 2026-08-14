@@ -41,7 +41,7 @@ export default function HomeScreen({ onPlaySolo, onPlayWithFriends }: HomeScreen
               </div>
               <p className="text-sm text-neutral-400 mb-3">{game.tagline}</p>
               <p className="text-xs text-neutral-500 mb-4">
-                {game.minPlayers}–{game.maxPlayers} players
+                {game.minPlayers <= 1 ? 'Any number of players' : `${game.minPlayers}+ players`}
               </p>
 
               {game.available && (
