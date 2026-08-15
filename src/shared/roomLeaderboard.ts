@@ -7,7 +7,7 @@ export interface RoomLeaderboardEntry {
   gameId: string
   playerId: string
   nickname: string
-  entryType: 'race' | 'tournament'
+  entryType: 'race' | 'tournament' | 'categories'
   wpm: number | null
   accuracyChar: number | null
   placement: number | null
@@ -22,7 +22,7 @@ interface RoomLeaderboardRow {
   game_id: string
   player_id: string
   nickname: string
-  entry_type: 'race' | 'tournament'
+  entry_type: 'race' | 'tournament' | 'categories'
   wpm: number | null
   accuracy_char: number | null
   placement: number | null
@@ -85,6 +85,28 @@ export async function saveTournamentLeaderboardEntry(params: {
     player_id: params.playerId,
     nickname: params.nickname,
     entry_type: 'tournament',
+    placement: params.placement,
+    rounds_played: params.roundsPlayed,
+    mode: params.mode,
+  })
+  if (error) throw error
+}
+
+export async function saveCategoriesLeaderboardEntry(params: {
+  roomCode: string
+  gameId: string
+  playerId: string
+  nickname: string
+  placement: number
+  roundsPlayed: number
+  mode: Record<string, unknown>
+}): Promise<void> {
+  const { error } = await supabase.from('room_leaderboard').insert({
+    room_code: params.roomCode,
+    game_id: params.gameId,
+    player_id: params.playerId,
+    nickname: params.nickname,
+    entry_type: 'categories',
     placement: params.placement,
     rounds_played: params.roundsPlayed,
     mode: params.mode,

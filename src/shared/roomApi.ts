@@ -14,6 +14,7 @@ interface RoomRow {
   game_id: string
   status: Room['status']
   passage: string | null
+  round_payload: unknown
   started_at: string | null
   mode: Record<string, unknown>
   round_number: number
@@ -43,7 +44,7 @@ async function fetchRoom(code: string): Promise<Room | null> {
   const [{ data: roomRow, error: roomError }, { data: playerRows, error: playersError }] = await Promise.all([
     supabase
       .from('rooms')
-      .select('code, game_id, status, passage, started_at, mode, round_number, eliminated_ids')
+      .select('code, game_id, status, passage, round_payload, started_at, mode, round_number, eliminated_ids')
       .eq('code', code)
       .maybeSingle(),
     supabase.from('room_players').select('*').eq('room_code', code).order('joined_at', { ascending: true }),
@@ -59,6 +60,7 @@ async function fetchRoom(code: string): Promise<Room | null> {
     gameId: room.game_id,
     status: room.status,
     passage: room.passage,
+    roundPayload: room.round_payload ?? null,
     startedAt: room.started_at ? new Date(room.started_at).getTime() : null,
     mode: room.mode ?? {},
     roundNumber: room.round_number ?? 1,

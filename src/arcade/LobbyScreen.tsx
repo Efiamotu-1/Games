@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { GameDefinition } from '../games/registry'
 import { getOrCreatePlayerId, savePlayerId, clearPlayerId, newPlayerId } from '../shared/identity'
-import { createRoomOnServer, joinRoomOnServer, leaveRoom, setPlayerReady, setRoomMode, startRace } from '../shared/roomApi'
+import { createRoomOnServer, joinRoomOnServer, leaveRoom, setPlayerReady, setRoomMode } from '../shared/roomApi'
 import { useRoom } from '../shared/useRoom'
 import RoomLeaderboard from './RoomLeaderboard'
 
@@ -79,7 +79,7 @@ export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStar
 
   async function startGame() {
     const payload = game.getStartPayload?.() ?? ''
-    await startRace(currentRoom.code, payload)
+    await game.startGame?.(currentRoom.code, payload)
     onStart(currentRoom.code)
   }
 

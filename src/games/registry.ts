@@ -4,6 +4,12 @@ import MultiplayerRace from './typing-wars/MultiplayerRace'
 import TypingWarsModePicker from './typing-wars/TypingWarsModePicker'
 import { getRandomPassage } from './typing-wars/passages'
 import { DEFAULT_RACE_MODE } from './typing-wars/types'
+import MultiplayerCategories from './categories/MultiplayerCategories'
+import CategoriesModePicker from './categories/CategoriesModePicker'
+import { getRandomPrompt, type CategoryPrompt } from './categories/wordBank'
+import { startCategoriesRound } from './categories/categoriesApi'
+import { DEFAULT_CATEGORIES_MODE } from './categories/types'
+import { startRace } from '../shared/roomApi'
 import type { Room } from '../shared/types'
 
 export interface MultiplayerGameProps {
@@ -28,8 +34,10 @@ export interface GameDefinition {
   supportsSolo: boolean
   soloComponent: ComponentType<{ onExit: () => void }> | null
   multiplayerComponent: ComponentType<MultiplayerGameProps> | null
-  /** Returns the passage/prompt text to seed a fresh multiplayer round. */
-  getStartPayload: (() => string) | null
+  /** Returns the payload (passage text, prompt object, etc.) to seed a fresh multiplayer round. */
+  getStartPayload: (() => unknown) | null
+  /** Starts the room using this game's payload shape (e.g. race passage vs. category prompt). */
+  startGame: ((roomCode: string, payload: unknown) => Promise<void>) | null
   /** Default mode config for a freshly created room. */
   defaultMode: Record<string, unknown>
   /** Host-only UI for picking mode settings in the lobby. */
@@ -48,6 +56,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: TypingWarsGame,
     multiplayerComponent: MultiplayerRace,
     getStartPayload: getRandomPassage,
+    startGame: (code, payload) => startRace(code, payload as string),
     defaultMode: { ...DEFAULT_RACE_MODE },
     modePickerComponent: TypingWarsModePicker,
   },
@@ -62,6 +71,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -71,13 +81,14 @@ export const GAMES: GameDefinition[] = [
     tagline: 'Given a category and letter, race to submit an answer.',
     minPlayers: 2,
     maxPlayers: 12,
-    available: false,
+    available: true,
     supportsSolo: false,
     soloComponent: null,
-    multiplayerComponent: null,
-    getStartPayload: null,
-    defaultMode: {},
-    modePickerComponent: null,
+    multiplayerComponent: MultiplayerCategories,
+    getStartPayload: getRandomPrompt,
+    startGame: (code, payload) => startCategoriesRound(code, payload as CategoryPrompt),
+    defaultMode: { ...DEFAULT_CATEGORIES_MODE },
+    modePickerComponent: CategoriesModePicker,
   },
   {
     id: 'trivia-battle',
@@ -90,6 +101,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -104,6 +116,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -118,6 +131,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -132,6 +146,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -146,6 +161,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -160,6 +176,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -174,6 +191,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },
@@ -188,6 +206,7 @@ export const GAMES: GameDefinition[] = [
     soloComponent: null,
     multiplayerComponent: null,
     getStartPayload: null,
+    startGame: null,
     defaultMode: {},
     modePickerComponent: null,
   },

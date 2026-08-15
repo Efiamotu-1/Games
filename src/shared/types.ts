@@ -12,6 +12,7 @@ export interface Room {
   players: Player[]
   status: 'lobby' | 'in-game' | 'finished'
   passage: string | null
+  roundPayload: unknown
   startedAt: number | null
   mode: Record<string, unknown>
   roundNumber: number
