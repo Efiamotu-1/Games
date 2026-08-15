@@ -78,7 +78,7 @@ export const GAMES: GameDefinition[] = [
   {
     id: 'categories',
     name: 'Categories',
-    tagline: 'Given a category and letter, race to submit an answer.',
+    tagline: "You get a topic and a letter (like Animals + S). Type a word that fits before time's up!",
     minPlayers: 2,
     maxPlayers: 12,
     available: true,

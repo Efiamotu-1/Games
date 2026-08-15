@@ -69,3 +69,16 @@ export function isValidAnswer(category: string, letter: string, answer: string):
   const bank = WORD_BANK[category] ?? []
   return bank.some((word) => word.toLowerCase() === trimmed)
 }
+
+/** All words in a category that start with the given letter, e.g. for showing examples or hints. */
+export function wordsFor(category: string, letter: string): string[] {
+  const bank = WORD_BANK[category] ?? []
+  return bank.filter((word) => word[0].toUpperCase() === letter.toUpperCase())
+}
+
+/** A random word from this round's valid pool, used to build a length hint without spoiling which word it is. */
+export function pickHintWord(category: string, letter: string): string | null {
+  const words = wordsFor(category, letter)
+  if (words.length === 0) return null
+  return words[Math.floor(Math.random() * words.length)]
+}

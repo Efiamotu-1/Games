@@ -13,8 +13,10 @@ import {
   submitCategoriesTimeout,
 } from './categoriesApi'
 import { useCategoriesSubmissions } from './useCategoriesSubmissions'
-import { getRandomPrompt, isValidAnswer, type CategoryPrompt } from './wordBank'
+import { getRandomPrompt, isValidAnswer, pickHintWord, wordsFor, type CategoryPrompt } from './wordBank'
 import { ROUND_SECONDS, toCategoriesMode } from './types'
+
+const HINT_DELAY_SECONDS = 15
 
 interface MultiplayerCategoriesProps {
   room: Room
@@ -64,6 +66,8 @@ function RoundScreen({
   const [remaining, setRemaining] = useState(ROUND_SECONDS)
   const [answer, setAnswer] = useState('')
   const answerRef = useRef('')
+  const [hintWord] = useState(() => pickHintWord(prompt.category, prompt.letter))
+  const showHint = remaining <= ROUND_SECONDS - HINT_DELAY_SECONDS
   const submitted = useRef(false)
   const scoringStarted = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -147,12 +151,29 @@ function RoundScreen({
       </header>
 
       <main className="w-full max-w-2xl flex-1 space-y-6 animate-pop-in">
+        {roundNumber === 1 && (
+          <p className="text-center text-sm text-neutral-400 bg-neutral-900/60 border border-neutral-800 rounded-xl px-4 py-3">
+            Type a real <span className="text-neutral-200 font-medium">{prompt.category.toLowerCase()}</span> that starts with the
+            letter shown. Fastest valid, unique answer scores — if someone else types the exact same word, neither of you gets the
+            point.
+          </p>
+        )}
+
         <div className="text-center space-y-3">
           <p className="text-xs uppercase tracking-widest text-neutral-500">{prompt.category}</p>
           <p className="text-6xl font-bold tracking-widest text-violet-300">{prompt.letter}</p>
           <p className={`text-2xl font-semibold ${remaining <= 10 ? 'text-rose-400' : 'text-neutral-300'}`}>
             {remaining.toFixed(1)}s
           </p>
+          {showHint && hintWord && (
+            <p className="text-xs text-neutral-500 animate-pop-in">
+              Stuck? One valid answer looks like:{' '}
+              <span className="tracking-[0.3em] font-mono-test text-neutral-300">
+                {[hintWord[0].toUpperCase(), ...Array(hintWord.replace(/\s/g, '').length - 1).fill('_')].join(' ')}
+              </span>{' '}
+              ({hintWord.replace(/\s/g, '').length} letters)
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 sm:p-6 space-y-3">
@@ -368,6 +389,15 @@ function RoundResults({
             )
           })}
         </div>
+
+        {roundSubmissions.every((s) => s.score === 0) && (
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+            <p className="text-xs text-neutral-500 mb-2">Nobody scored this round. Valid answers included:</p>
+            <p className="text-sm text-neutral-300 capitalize">
+              {wordsFor(prompt.category, prompt.letter).slice(0, 6).join(', ') || 'No examples available'}
+            </p>
+          </div>
+        )}
 
         {isHost && (
           <button

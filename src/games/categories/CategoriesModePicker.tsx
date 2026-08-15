@@ -10,7 +10,11 @@ export default function CategoriesModePicker({ mode, onChange, disabled }: ModeP
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      <p className="text-xs text-neutral-400 leading-relaxed">
+        Each round shows a category and a letter. Everyone has 30 seconds to type a real word in that category starting
+        with that letter. Get it right and be the only one with that answer to score a point.
+      </p>
       <p className="text-xs text-neutral-500">Rounds</p>
       <div className="grid grid-cols-4 gap-2">
         {ROUND_COUNT_OPTIONS.map((count) => (
