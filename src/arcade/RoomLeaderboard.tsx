@@ -3,9 +3,9 @@ import { useRoomLeaderboard } from '../shared/roomLeaderboard'
 const MEDALS = ['🥇', '🥈', '🥉']
 
 function scoreFor(entry: ReturnType<typeof useRoomLeaderboard>[number]): number {
-  if (entry.entryType === 'tournament') {
+  if (entry.entryType === 'tournament' || entry.entryType === 'categories') {
     // Lower placement (1st) should sort first; give it a large synthetic
-    // score so tournament wins rank alongside/above strong race WPMs.
+    // score so placement-based entries rank alongside/above strong race WPMs.
     return 1000 - (entry.placement ?? 999)
   }
   return entry.wpm ?? 0
@@ -43,7 +43,9 @@ export default function RoomLeaderboard({ roomCode }: { roomCode: string }) {
               <p className="text-xs text-neutral-500">
                 {entry.entryType === 'tournament'
                   ? `🏆 Tournament — ${placementLabel(entry.placement)} · ${entry.roundsPlayed ?? '?'} rounds`
-                  : `${entry.wpm} WPM · ${entry.accuracyChar}% accuracy`}
+                  : entry.entryType === 'categories'
+                    ? `Categories — ${placementLabel(entry.placement)} · ${entry.roundsPlayed ?? '?'} rounds`
+                    : `${entry.wpm} WPM · ${entry.accuracyChar}% accuracy`}
               </p>
             </div>
             <span className="text-[10px] text-neutral-600 shrink-0">

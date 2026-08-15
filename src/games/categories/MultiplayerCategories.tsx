@@ -63,6 +63,7 @@ function RoundScreen({
   const [startedAt] = useState(() => room.startedAt ?? Date.now())
   const [remaining, setRemaining] = useState(ROUND_SECONDS)
   const [answer, setAnswer] = useState('')
+  const answerRef = useRef('')
   const submitted = useRef(false)
   const scoringStarted = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -96,11 +97,16 @@ function RoundScreen({
   async function submit() {
     if (submitted.current) return
     submitted.current = true
-    const valid = isValidAnswer(prompt.category, prompt.letter, answer)
-    if (answer.trim()) {
-      await submitCategoriesAnswer(room.code, selfId, roundNumber, answer.trim(), valid)
-    } else {
-      await submitCategoriesTimeout(room.code, selfId, roundNumber)
+    const currentAnswer = answerRef.current
+    const valid = isValidAnswer(prompt.category, prompt.letter, currentAnswer)
+    try {
+      if (currentAnswer.trim()) {
+        await submitCategoriesAnswer(room.code, selfId, roundNumber, currentAnswer.trim(), valid)
+      } else {
+        await submitCategoriesTimeout(room.code, selfId, roundNumber)
+      }
+    } catch {
+      submitted.current = false
     }
   }
 
@@ -115,7 +121,9 @@ function RoundScreen({
   }, [allSubmitted])
 
   if (allSubmitted && roundScored) {
-    return <RoundResults room={room} prompt={prompt} submissions={roundSubmissions} selfId={selfId} onExit={onExit} />
+    return (
+      <RoundResults room={room} prompt={prompt} roundSubmissions={roundSubmissions} allSubmissions={submissions} selfId={selfId} onExit={onExit} />
+    )
   }
 
   if (allSubmitted) {
@@ -151,7 +159,10 @@ function RoundScreen({
           <input
             ref={inputRef}
             value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
+            onChange={(e) => {
+              setAnswer(e.target.value)
+              answerRef.current = e.target.value
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') submit()
             }}
@@ -196,13 +207,15 @@ function RoundScreen({
 function RoundResults({
   room,
   prompt,
-  submissions,
+  roundSubmissions,
+  allSubmissions,
   selfId,
   onExit,
 }: {
   room: Room
   prompt: CategoryPrompt
-  submissions: ReturnType<typeof useCategoriesSubmissions>
+  roundSubmissions: ReturnType<typeof useCategoriesSubmissions>
+  allSubmissions: ReturnType<typeof useCategoriesSubmissions>
   selfId: string
   onExit: () => void
 }) {
@@ -211,7 +224,6 @@ function RoundResults({
   const self = room.players.find((p) => p.id === selfId)
   const isHost = self?.isHost ?? false
   const [advancing, setAdvancing] = useState(false)
-  const allSubmissions = useCategoriesSubmissions(room.code)
 
   const totals = room.players.map((p) => ({
     player: p,
@@ -333,7 +345,7 @@ function RoundResults({
 
         <div className="space-y-2">
           {room.players.map((p) => {
-            const s = submissions.find((sub) => sub.playerId === p.id)
+            const s = roundSubmissions.find((sub) => sub.playerId === p.id)
             return (
               <div
                 key={p.id}
