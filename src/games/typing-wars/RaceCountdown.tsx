@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 interface RaceCountdownProps {
   startedAt: number
   label?: string
+  hint?: string
   onDone?: () => void
 }
 
@@ -10,7 +11,7 @@ interface RaceCountdownProps {
  * Shows a synced countdown to `startedAt` (a shared server timestamp, so
  * every player sees the same number regardless of their own clock drift).
  */
-export default function RaceCountdown({ startedAt, label, onDone }: RaceCountdownProps) {
+export default function RaceCountdown({ startedAt, label, hint = 'Get ready to type…', onDone }: RaceCountdownProps) {
   const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil((startedAt - Date.now()) / 1000)))
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function RaceCountdown({ startedAt, label, onDone }: RaceCountdow
       <p key={secondsLeft} className="text-7xl font-bold text-violet-300 animate-pop-in">
         {secondsLeft > 0 ? secondsLeft : 'Go!'}
       </p>
-      <p className="text-sm text-neutral-500">Get ready to type…</p>
+      <p className="text-sm text-neutral-500">{hint}</p>
     </div>
   )
 }

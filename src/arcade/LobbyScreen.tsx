@@ -240,7 +240,9 @@ function JoinScreen({
         await onJoinRoom(joinCode.trim(), nickname.trim())
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
+      // Supabase errors are plain objects with a message, not Error instances.
+      const message = e instanceof Error ? e.message : (e as { message?: string } | null)?.message
+      setError(message || 'Something went wrong.')
     } finally {
       setBusy(false)
     }

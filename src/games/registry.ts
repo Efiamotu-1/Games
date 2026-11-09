@@ -9,6 +9,11 @@ import CategoriesModePicker from './categories/CategoriesModePicker'
 import { getRandomPrompt, type CategoryPrompt } from './categories/wordBank'
 import { startCategoriesRound } from './categories/categoriesApi'
 import { DEFAULT_CATEGORIES_MODE } from './categories/types'
+import RapidRunGame from './rapid-run/RapidRunGame'
+import MultiplayerRapidRun from './rapid-run/MultiplayerRapidRun'
+import RapidRunModePicker from './rapid-run/RapidRunModePicker'
+import { startRapidRun } from './rapid-run/rapidApi'
+import { DEFAULT_RAPID_MODE, newRapidPayload, type RapidPayload } from './rapid-run/types'
 import { startRace } from '../shared/roomApi'
 import type { Room } from '../shared/types'
 
@@ -89,6 +94,21 @@ export const GAMES: GameDefinition[] = [
     startGame: (code, payload) => startCategoriesRound(code, payload as CategoryPrompt),
     defaultMode: { ...DEFAULT_CATEGORIES_MODE },
     modePickerComponent: CategoriesModePicker,
+  },
+  {
+    id: 'rapid-run',
+    name: 'Rapid-Run Trivia',
+    tagline: 'Everyone answers the same questions at once. Top score wins, or play elimination.',
+    minPlayers: 2,
+    maxPlayers: 12,
+    available: true,
+    supportsSolo: true,
+    soloComponent: RapidRunGame,
+    multiplayerComponent: MultiplayerRapidRun,
+    getStartPayload: newRapidPayload,
+    startGame: (code, payload) => startRapidRun(code, payload as RapidPayload),
+    defaultMode: { ...DEFAULT_RAPID_MODE },
+    modePickerComponent: RapidRunModePicker,
   },
   {
     id: 'trivia-battle',

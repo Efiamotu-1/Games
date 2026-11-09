@@ -57,3 +57,23 @@ button:disabled {
 .animate-pop-in {
   animation: pop-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+
+@keyframes score-float {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  20% { opacity: 1; transform: translateY(-4px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-26px) scale(1); }
+}
+
+.animate-score-float {
+  animation: score-float 0.9s ease-out both;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.25s ease-in-out;
+}
