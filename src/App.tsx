@@ -4,6 +4,7 @@ import { GAMES } from './games/registry'
 import { useRoom } from './shared/useRoom'
 import { useRouter } from './shared/router'
 import { getOrCreatePlayerId } from './shared/identity'
+import RoomChat from './arcade/RoomChat'
 
 export default function App() {
   const { route, navigate } = useRouter()
@@ -67,5 +68,10 @@ function PlayScreen({ gameId, roomCode, onExit }: { gameId: string; roomCode: st
   }
 
   const MultiplayerComponent = game.multiplayerComponent
-  return <MultiplayerComponent room={room} selfId={selfId} onExit={onExit} />
+  return (
+    <>
+      <MultiplayerComponent room={room} selfId={selfId} onExit={onExit} />
+      {room.status === 'finished' && <RoomChat room={room} selfId={selfId} />}
+    </>
+  )
 }

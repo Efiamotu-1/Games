@@ -4,6 +4,7 @@ import { getOrCreatePlayerId, savePlayerId, clearPlayerId, newPlayerId } from '.
 import { createRoomOnServer, joinRoomOnServer, leaveRoom, setPlayerReady, setRoomMode } from '../shared/roomApi'
 import { useRoom } from '../shared/useRoom'
 import RoomLeaderboard from './RoomLeaderboard'
+import RoomChat from './RoomChat'
 
 interface LobbyScreenProps {
   game: GameDefinition
@@ -183,6 +184,7 @@ export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStar
 
         <RoomLeaderboard roomCode={room.code} />
       </main>
+      <RoomChat room={room} selfId={selfId} />
     </div>
   )
 }
