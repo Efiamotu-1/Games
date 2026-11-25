@@ -1,9 +1,10 @@
 import type { ModePickerProps } from '../registry'
 import { CATEGORIES, poolSize } from './questions'
+import { useLatestQuestions } from './generatedApi'
 import {
   DIFFICULTIES,
   ROUND_COUNT_OPTIONS,
-  ROUND_SECONDS_OPTIONS,
+  TIME_LIMITS,
   STRIKE_LIMIT,
   toRapidMode,
   type RapidFormat,
@@ -15,13 +16,13 @@ const FORMATS: { id: RapidFormat; label: string; description: string }[] = [
     id: 'classic',
     label: 'Classic',
     description:
-      'Everyone answers the same questions at once. When time runs out, scores are ranked. Play several rounds and your totals add up.',
+      'Everyone answers the same questions at once. When the round ends, scores are ranked, and the faster finisher wins a tie. Play several rounds and your totals add up.',
   },
   {
     id: 'elimination',
     label: 'Elimination',
     description:
-      "Everyone answers the same questions at once. When the clock runs out, whoever scored lowest is eliminated and the rest go again, until one player is left. Chain correct answers to multiply your points, and watch the live board to see if you're in the danger zone.",
+      "Everyone answers the same questions at once. When the clock runs out, whoever scored lowest is eliminated and the rest go again, until one player is left. Every correct answer is worth one point. Watch the live board to see if you're in the danger zone.",
   },
 ]
 
@@ -41,7 +42,8 @@ export default function RapidRunModePicker({ mode, onChange, disabled }: ModePic
   }
 
   const allCategories = current.categories.length === 0
-  const questionCount = poolSize({ difficulty: current.difficulty, categories: current.categories })
+  const pool = useLatestQuestions()
+  const questionCount = pool ? poolSize({ difficulty: current.difficulty, categories: current.categories }, pool) : null
   const format = FORMATS.find((f) => f.id === current.format) ?? FORMATS[0]
 
   return (
@@ -58,14 +60,19 @@ export default function RapidRunModePicker({ mode, onChange, disabled }: ModePic
       </Section>
 
       <div className={`grid gap-5 ${current.format === 'classic' ? 'sm:grid-cols-2' : ''}`}>
-        <Section label="Seconds per round">
+        <Section label="Time per round">
           <div className="grid grid-cols-4 gap-2">
-            {ROUND_SECONDS_OPTIONS.map((seconds) => (
+            {TIME_LIMITS.map(({ seconds, label }) => (
               <Choice key={seconds} active={current.roundSeconds === seconds} disabled={disabled} onClick={() => update({ roundSeconds: seconds })}>
-                {seconds}s
+                {label}
               </Choice>
             ))}
           </div>
+          <p className="text-xs text-neutral-500">
+            {current.roundSeconds === 0
+              ? 'No timer: everyone answers every question once. Ties go to whoever finishes faster.'
+              : 'The round ends when time is up.'}
+          </p>
         </Section>
 
         {current.format === 'classic' && (
@@ -89,7 +96,7 @@ export default function RapidRunModePicker({ mode, onChange, disabled }: ModePic
             </Choice>
           ))}
         </div>
-        <p className="text-xs text-neutral-500">Normal pays 100 a hit, Expert pays 250. Mixed has both.</p>
+        <p className="text-xs text-neutral-500">Every correct answer is worth 1 point. Difficulty only decides which of today's questions are used.</p>
       </Section>
 
       <Section label="Categories">
@@ -109,7 +116,9 @@ export default function RapidRunModePicker({ mode, onChange, disabled }: ModePic
           ))}
         </div>
         <p className="text-xs text-neutral-500">
-          {questionCount} questions in the pool{questionCount < 30 ? '. Small pools repeat, so mix in more categories.' : '.'}
+          {questionCount === null
+            ? "Today's questions aren't ready yet."
+            : `${questionCount} questions in the pool${questionCount < 30 ? '. Small pools repeat, so mix in more categories.' : '.'}`}
         </p>
       </Section>
 

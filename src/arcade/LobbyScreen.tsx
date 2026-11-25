@@ -16,6 +16,7 @@ interface LobbyScreenProps {
 
 export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStart, onExit }: LobbyScreenProps) {
   const room = useRoom(prefillRoomCode)
+  const [startError, setStartError] = useState<string | null>(null)
   const selfId = prefillRoomCode ? getOrCreatePlayerId(prefillRoomCode) : null
 
   useEffect(() => {
@@ -79,9 +80,14 @@ export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStar
   }
 
   async function startGame() {
-    const payload = game.getStartPayload?.() ?? ''
-    await game.startGame?.(currentRoom.code, payload)
-    onStart(currentRoom.code)
+    setStartError(null)
+    try {
+      const payload = game.getStartPayload?.() ?? ''
+      await game.startGame?.(currentRoom.code, payload)
+      onStart(currentRoom.code)
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : 'Could not start the game. Try again.')
+    }
   }
 
   return (
@@ -181,6 +187,7 @@ export default function LobbyScreen({ game, prefillRoomCode, onRoomReady, onStar
                 : 'Waiting for everyone to be ready'}
           </button>
         )}
+        {startError && <p className="text-center text-sm text-rose-300">{startError}</p>}
 
         <RoomLeaderboard roomCode={room.code} />
       </main>

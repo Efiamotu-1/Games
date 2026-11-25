@@ -14,7 +14,7 @@ export default function App() {
   }
 
   if (route.name === 'solo') {
-    const game = GAMES.find((g) => g.id === route.gameId)
+    const game = GAMES.find((g) => g.id === route.gameId && !g.hidden)
     if (game?.soloComponent) {
       const SoloComponent = game.soloComponent
       return <SoloComponent onExit={goHome} />
@@ -24,7 +24,7 @@ export default function App() {
   }
 
   if (route.name === 'lobby') {
-    const game = GAMES.find((g) => g.id === route.gameId)
+    const game = GAMES.find((g) => g.id === route.gameId && !g.hidden)
     if (!game) {
       goHome()
       return null
@@ -55,11 +55,16 @@ export default function App() {
 }
 
 function PlayScreen({ gameId, roomCode, onExit }: { gameId: string; roomCode: string; onExit: () => void }) {
-  const game = GAMES.find((g) => g.id === gameId)
+  const game = GAMES.find((g) => g.id === gameId && !g.hidden)
   const room = useRoom(roomCode)
   const selfId = getOrCreatePlayerId(roomCode)
 
-  if (!game?.multiplayerComponent || !room) {
+  if (!game) {
+    onExit()
+    return null
+  }
+
+  if (!game.multiplayerComponent || !room) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <p className="text-neutral-400 animate-pulse">Loading…</p>

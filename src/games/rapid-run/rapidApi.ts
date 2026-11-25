@@ -1,5 +1,6 @@
 import { supabase } from '../../shared/supabase'
 import { START_COUNTDOWN_SECONDS } from '../../shared/roomApi'
+import { fetchLatestBatch } from './generatedApi'
 import type { RapidPayload, RunSummary } from './types'
 
 function futureStartTime(): string {
@@ -7,6 +8,10 @@ function futureStartTime(): string {
 }
 
 export async function startRapidRun(code: string, payload: RapidPayload): Promise<void> {
+  // Every game plays the latest complete set of generated questions, pinned so all devices load the same one.
+  const batch = payload.batch ?? (await fetchLatestBatch().catch(() => null))
+  if (!batch) throw new Error("Today's trivia isn't ready yet. Try again in a little while.")
+  payload = { ...payload, batch }
   const { error } = await supabase
     .from('rooms')
     .update({

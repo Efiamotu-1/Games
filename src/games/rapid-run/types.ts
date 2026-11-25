@@ -2,7 +2,18 @@ import { CATEGORIES, type Difficulty } from './questions'
 
 export type RapidFormat = 'classic' | 'elimination'
 
-export const ROUND_SECONDS_OPTIONS = [20, 30, 45, 60] as const
+/**
+ * The time limits offered everywhere (daily trivia and room lobbies). 0 means no timer: the player answers every
+ * question, and the faster finisher wins ties.
+ */
+export const TIME_LIMITS = [
+  { seconds: 0, label: 'No timer' },
+  { seconds: 60, label: '1 min' },
+  { seconds: 120, label: '2 min' },
+  { seconds: 300, label: '5 min' },
+] as const
+
+export const ROUND_SECONDS_OPTIONS = TIME_LIMITS.map((t) => t.seconds)
 export const ROUND_COUNT_OPTIONS = [1, 3, 5] as const
 export const DIFFICULTIES: { id: Difficulty; label: string }[] = [
   { id: 'mixed', label: 'Mixed' },
@@ -26,7 +37,7 @@ export interface RapidMode {
 
 export const DEFAULT_RAPID_MODE: RapidMode = {
   format: 'classic',
-  roundSeconds: 60,
+  roundSeconds: 0,
   rounds: 1,
   difficulty: 'mixed',
   categories: [],
@@ -57,15 +68,25 @@ export interface RapidPayload {
   seed: number
   /** Classic format: cumulative score per player id from the rounds already played. */
   totals?: Record<string, number>
+  /** Set when today's AI-generated questions are part of the pool: which day, up to when, and how many. */
+  batch?: BatchRef
+}
+
+/** Pins the exact set of generated questions, so late arrivals can't change a room's deck. */
+export interface BatchRef {
+  day: string
+  upTo: string
+  count: number
 }
 
 export function isRapidPayload(value: unknown): value is RapidPayload {
   return !!value && typeof value === 'object' && typeof (value as RapidPayload).seed === 'number'
 }
 
-export const newRapidPayload = (totals?: Record<string, number>): RapidPayload => ({
+export const newRapidPayload = (totals?: Record<string, number>, batch?: BatchRef): RapidPayload => ({
   seed: Math.floor(Math.random() * 2 ** 32),
   ...(totals ? { totals } : {}),
+  ...(batch ? { batch } : {}),
 })
 
 export interface RunSummary {
@@ -74,4 +95,8 @@ export interface RunSummary {
   total: number
   bestStreak: number
   accuracy: number
+  /** Seconds the run took (set for every run). */
+  seconds?: number
+  /** True when the round had no timer, so time is the tie-breaker. */
+  untimed?: boolean
 }

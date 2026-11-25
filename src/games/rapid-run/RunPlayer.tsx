@@ -5,9 +5,7 @@ const DEFAULT_DURATION_MS = 60_000
 const VELOCITY_WINDOW_MS = 10_000
 const REVEAL_RIGHT_MS = 220
 const REVEAL_WRONG_MS = 650
-const LETTERS = ['A', 'B', 'C', 'D', 'E']
-
-const multiplierFor = (streak: number) => Math.min(5, 1 + Math.floor(streak / 5))
+const LETTERS = ['A', 'B', 'C', 'D']
 
 export interface RunResult {
   score: number
@@ -15,6 +13,8 @@ export interface RunResult {
   total: number
   bestStreak: number
   qps: number
+  /** Whole seconds the run took. */
+  seconds: number
   /** Picked option index per answered question, in order (the server re-scores from this). */
   picks: number[]
 }
@@ -30,6 +30,8 @@ interface RunPlayerProps {
   durationMs?: number
   /** Fires after every answer, so a room can show live standings. */
   onProgress?: (progress: { score: number; answered: number; accuracy: number }) => void
+  /** No countdown: the run ends when the questions do. Shows progress instead of a clock. */
+  untimed?: boolean
   /** Wrong answers allowed before the run ends early. Omit for unlimited. */
   maxStrikes?: number
   /** Rendered between the HUD and the question card. */
@@ -45,6 +47,7 @@ export default function RunPlayer({
   durationMs = DEFAULT_DURATION_MS,
   onProgress,
   maxStrikes,
+  untimed,
   aside,
 }: RunPlayerProps) {
   const [question, setQuestion] = useState<Question | null>(() => getQuestion(0))
@@ -78,6 +81,7 @@ export default function RunPlayer({
       total: s.total,
       bestStreak: s.best,
       qps: s.total / (seconds || 1),
+      seconds: Math.round(seconds),
       picks: s.picks,
     })
   }, [durationMs])
@@ -95,9 +99,8 @@ export default function RunPlayer({
         s.correct += 1
         s.streak += 1
         s.best = Math.max(s.best, s.streak)
-        const amount = question.points * multiplierFor(s.streak)
-        s.score += amount
-        setGain({ id: s.total, amount })
+        s.score += 1
+        setGain({ id: s.total, amount: 1 })
       } else {
         s.streak = 0
         s.wrong += 1
@@ -163,14 +166,17 @@ export default function RunPlayer({
   if (!question) return null
 
   const secondsLeft = Math.ceil(msLeft / 1000)
-  const multiplier = multiplierFor(streak)
   const wrongPicked = picked !== null && picked !== question.correct
 
   return (
     <div className="w-full max-w-2xl space-y-4 sm:space-y-5">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-3">
-        <ComboMeter streak={streak} multiplier={multiplier} />
-        <TimerRing msLeft={msLeft} durationMs={durationMs} secondsLeft={secondsLeft} />
+        <Streak streak={streak} />
+        {untimed ? (
+          <ProgressRing done={asked - 1} total={totalQuestions ?? asked} />
+        ) : (
+          <TimerRing msLeft={msLeft} durationMs={durationMs} secondsLeft={secondsLeft} />
+        )}
         <div className="relative text-right">
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Score</p>
           <p className="text-2xl sm:text-3xl font-semibold tabular-nums text-violet-200">{score}</p>
@@ -218,7 +224,7 @@ export default function RunPlayer({
             {question.text}
           </h2>
 
-          <div className="grid gap-3 sm:grid-cols-6">
+          <div className="grid gap-3 sm:grid-cols-2">
             {question.options.map((option, i) => (
               <OptionKey
                 key={i}
@@ -231,7 +237,7 @@ export default function RunPlayer({
           </div>
         </div>
       </div>
-      <p className="hidden sm:block text-center text-xs text-neutral-600">Hit A B C D E or 1 2 3 4 5</p>
+      <p className="hidden sm:block text-center text-xs text-neutral-600">Hit A B C D or 1 2 3 4</p>
     </div>
   )
 }
@@ -251,7 +257,6 @@ const KEY_HUES = [
   { idle: 'hover:border-sky-400/70 hover:bg-sky-500/10', cap: 'bg-sky-500/20 text-sky-200 border-sky-400/40' },
   { idle: 'hover:border-amber-400/70 hover:bg-amber-500/10', cap: 'bg-amber-500/20 text-amber-200 border-amber-400/40' },
   { idle: 'hover:border-pink-400/70 hover:bg-pink-500/10', cap: 'bg-pink-500/20 text-pink-200 border-pink-400/40' },
-  { idle: 'hover:border-teal-400/70 hover:bg-teal-500/10', cap: 'bg-teal-500/20 text-teal-200 border-teal-400/40' },
 ]
 
 const STATE_STYLES: Record<Exclude<OptionState, 'idle'>, { box: string; cap: string }> = {
@@ -281,7 +286,7 @@ function OptionKey({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-all duration-100 ${box} ${index < 3 ? 'sm:col-span-2' : 'sm:col-span-3'}`}
+      className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-all duration-100 ${box}`}
     >
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-b-4 text-sm font-bold ${cap}`}
@@ -293,34 +298,45 @@ function OptionKey({
   )
 }
 
-function ComboMeter({ streak, multiplier }: { streak: number; multiplier: number }) {
-  const maxed = multiplier >= 5
-  const filled = maxed ? 5 : streak % 5
+function Streak({ streak }: { streak: number }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider text-neutral-500">Combo</p>
-      <div className="mt-1 flex items-center gap-2">
-        <span
-          className={`rounded-lg px-2 py-0.5 text-sm font-bold tabular-nums transition-colors ${
-            multiplier > 1
-              ? 'bg-amber-400 text-neutral-950 shadow-[0_0_14px_rgba(251,191,36,0.55)]'
-              : 'bg-neutral-800 text-neutral-400'
-          }`}
-        >
-          ×{multiplier}
-        </span>
-        <div className="flex gap-1">
-          {Array.from({ length: 5 }, (_, i) => (
-            <span
-              key={i}
-              className={`h-2 w-2.5 rounded-sm transition-colors ${
-                i < filled ? (maxed ? 'bg-amber-400' : 'bg-violet-400') : 'bg-neutral-800'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-      <p className="mt-1 text-[10px] text-neutral-500 tabular-nums">{streak} in a row</p>
+      <p className="text-[10px] uppercase tracking-wider text-neutral-500">Streak</p>
+      <p
+        className={`mt-1 text-2xl sm:text-3xl font-semibold tabular-nums transition-colors ${
+          streak >= 3 ? 'text-amber-300' : 'text-neutral-300'
+        }`}
+      >
+        {streak}
+      </p>
+      <p className="text-[10px] text-neutral-500">in a row</p>
+    </div>
+  )
+}
+
+function ProgressRing({ done, total }: { done: number; total: number }) {
+  const pct = total > 0 ? Math.min(100, (done / total) * 100) : 0
+  return (
+    <div className="relative h-20 w-20 sm:h-24 sm:w-24">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="#262626" strokeWidth="7" />
+        <circle
+          cx="50"
+          cy="50"
+          r="44"
+          fill="none"
+          stroke="#a78bfa"
+          strokeWidth="7"
+          strokeLinecap="round"
+          pathLength={100}
+          strokeDasharray={`${pct} 100`}
+          style={{ filter: 'drop-shadow(0 0 6px rgba(167,139,250,0.6))' }}
+        />
+      </svg>
+      <span className="absolute inset-0 flex flex-col items-center justify-center text-lg sm:text-xl font-semibold tabular-nums leading-tight">
+        {done}
+        <span className="text-[10px] font-normal text-neutral-500">of {total}</span>
+      </span>
     </div>
   )
 }

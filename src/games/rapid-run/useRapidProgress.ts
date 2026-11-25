@@ -28,11 +28,17 @@ export function useRapidProgress(roomCode: string | null): RapidProgress[] {
   )
 }
 
-/** Highest score first; ties go to more correct answers, then accuracy, then id so every client ranks identically. */
+/** Highest score first; ties go to the faster finisher (no-timer rounds), more correct answers, then accuracy, then id so every client ranks identically. */
 export function compareProgress(a: RapidProgress | undefined, b: RapidProgress | undefined, aId: string, bId: string): number {
   const aScore = a?.summary?.score ?? a?.score ?? 0
   const bScore = b?.summary?.score ?? b?.score ?? 0
   if (aScore !== bScore) return bScore - aScore
+  // With no timer everyone answers the same questions, so the faster finisher wins a tie.
+  if (a?.summary?.untimed && b?.summary?.untimed) {
+    const aSeconds = a.summary.seconds ?? 0
+    const bSeconds = b.summary.seconds ?? 0
+    if (aSeconds !== bSeconds) return aSeconds - bSeconds
+  }
   const aCorrect = a?.summary?.correct ?? 0
   const bCorrect = b?.summary?.correct ?? 0
   if (aCorrect !== bCorrect) return bCorrect - aCorrect

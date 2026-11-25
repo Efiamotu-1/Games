@@ -22,7 +22,7 @@ export default function HomeScreen({ onPlaySolo, onPlayWithFriends }: HomeScreen
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {GAMES.map((game) => (
+          {GAMES.filter((game) => !game.hidden).map((game) => (
             <div
               key={game.id}
               className={`rounded-2xl border p-5 transition-all ${
@@ -51,7 +51,7 @@ export default function HomeScreen({ onPlaySolo, onPlayWithFriends }: HomeScreen
                       onClick={() => onPlaySolo(game.id)}
                       className="flex-1 py-2 rounded-lg border border-neutral-700 hover:border-neutral-500 text-xs font-medium transition-colors"
                     >
-                      Practice Solo
+                      {game.soloLabel ?? 'Practice Solo'}
                     </button>
                   )}
                   <button

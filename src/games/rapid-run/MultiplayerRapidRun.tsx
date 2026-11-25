@@ -5,7 +5,8 @@ import { saveTournamentLeaderboardEntry } from '../../shared/roomLeaderboard'
 import RoomLeaderboard from '../../arcade/RoomLeaderboard'
 import RaceCountdown, { isCountingDown } from '../typing-wars/RaceCountdown'
 import RunPlayer, { type RunResult } from './RunPlayer'
-import { dealSeeded } from './questions'
+import { dealOnce, dealSeeded, type ExtraQuestion } from './questions'
+import { useBatch } from './generatedApi'
 import { advanceRapidRound, finishRapidGame, publishLiveScore, resetRapidForRematch, submitRunSummary } from './rapidApi'
 import {
   STRIKE_LIMIT,
@@ -27,6 +28,11 @@ type RoomPlayer = Room['players'][number]
 type Totals = Record<string, number>
 
 const LIVE_THROTTLE_MS = 350
+const NO_TIMER_MS = 24 * 60 * 60 * 1000
+
+function clock(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
 
 export default function MultiplayerRapidRun({ room, selfId, onExit }: MultiplayerRapidRunProps) {
   const mode = toRapidMode(room.mode)
@@ -74,7 +80,7 @@ export default function MultiplayerRapidRun({ room, selfId, onExit }: Multiplaye
   }
 
   return (
-    <RoundScreen
+    <RoundGate
       key={`${room.roundNumber}-${room.startedAt}`}
       room={room}
       payload={payload}
@@ -105,6 +111,55 @@ function rankPlayers(players: RoomPlayer[], progress: RapidProgress[], carry: To
   })
 }
 
+/** Waits for the room's pinned AI-generated questions (if any) before the round begins. */
+function RoundGate(props: RoundScreenProps) {
+  const batch = useBatch(props.payload.batch)
+  if (!props.payload.batch) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="text-neutral-300">This game has no questions. Ask the host to start a new one.</p>
+        <button
+          onClick={props.onExit}
+          className="rounded-xl border border-neutral-700 px-5 py-2 text-sm font-medium hover:border-neutral-500"
+        >
+          Back to arcade
+        </button>
+      </div>
+    )
+  }
+  if (batch.status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <p className="text-neutral-400 animate-pulse">Loading today&apos;s questions…</p>
+      </div>
+    )
+  }
+  if (batch.status === 'error') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="text-neutral-300">Couldn&apos;t load today&apos;s questions.</p>
+        <button
+          onClick={batch.retry}
+          className="rounded-xl bg-violet-500 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-400"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
+  return <RoundScreen {...props} extra={batch.questions} />
+}
+
+interface RoundScreenProps {
+  room: Room
+  payload: RapidPayload
+  mode: RapidMode
+  startedAt: number
+  survivors: RoomPlayer[]
+  selfId: string
+  onExit: () => void
+}
+
 function RoundScreen({
   room,
   payload,
@@ -113,23 +168,20 @@ function RoundScreen({
   survivors,
   selfId,
   onExit,
-}: {
-  room: Room
-  payload: RapidPayload
-  mode: RapidMode
-  startedAt: number
-  survivors: RoomPlayer[]
-  selfId: string
-  onExit: () => void
-}) {
+  extra,
+}: RoundScreenProps & { extra: ExtraQuestion[] }) {
   const isElimination = mode.format === 'elimination'
   const carry = useMemo(() => payload.totals ?? {}, [payload.totals])
   const categoryKey = mode.categories.join('|')
+  const untimed = mode.roundSeconds === 0
   const deck = useMemo(
-    () => dealSeeded(payload.seed, { difficulty: mode.difficulty, categories: mode.categories }),
+    () =>
+      untimed
+        ? dealOnce(payload.seed, { difficulty: mode.difficulty, categories: mode.categories }, extra)
+        : dealSeeded(payload.seed, { difficulty: mode.difficulty, categories: mode.categories }, extra),
     // categoryKey stands in for the categories array, which is rebuilt on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [payload.seed, mode.difficulty, categoryKey],
+    [payload.seed, mode.difficulty, categoryKey, extra, untimed],
   )
   const getQuestion = useCallback((i: number) => deck[i] ?? null, [deck])
   const progress = useRapidProgress(room.code)
@@ -166,9 +218,11 @@ function RoundScreen({
         total: run.total,
         bestStreak: run.bestStreak,
         accuracy: run.total ? Math.round((run.correct / run.total) * 100) : 0,
+        seconds: run.seconds,
+        untimed,
       }).catch(() => {})
     },
-    [selfId],
+    [selfId, untimed],
   )
 
   const allSubmitted = survivors.every((p) => progress.find((x) => x.playerId === p.id)?.finished)
@@ -203,7 +257,7 @@ function RoundScreen({
       try {
         if (isElimination) {
           const nextEliminated = [...room.eliminatedIds, ranked[ranked.length - 1].id]
-          const won = await advanceRapidRound(room.code, room.roundNumber, nextEliminated, newRapidPayload())
+          const won = await advanceRapidRound(room.code, room.roundNumber, nextEliminated, newRapidPayload(undefined, payload.batch))
           if (!won || survivors.length - 1 > 1) return
           await saveStandings(
             [ranked[0], ...[...nextEliminated].reverse().map((id) => room.players.find((p) => p.id === id))].filter(
@@ -212,16 +266,16 @@ function RoundScreen({
           )
           await finishTournament(room.code)
         } else if (isLastRound) {
-          const won = await finishRapidGame(room.code, room.roundNumber, { seed: payload.seed, totals: nextTotals })
+          const won = await finishRapidGame(room.code, room.roundNumber, { seed: payload.seed, totals: nextTotals, batch: payload.batch })
           if (won) await saveStandings(ranked)
         } else {
-          await advanceRapidRound(room.code, room.roundNumber, room.eliminatedIds, newRapidPayload(nextTotals))
+          await advanceRapidRound(room.code, room.roundNumber, room.eliminatedIds, newRapidPayload(nextTotals, payload.batch))
         }
       } catch {
         advancing.current = false
       }
     })()
-  }, [ended, allSubmitted, survivors, progress, carry, isElimination, isLastRound, payload.seed, room.code, room.eliminatedIds, room.players, room.roundNumber, room.gameId, room.mode])
+  }, [ended, allSubmitted, survivors, progress, carry, isElimination, isLastRound, payload.seed, payload.batch, room.code, room.eliminatedIds, room.players, room.roundNumber, room.gameId, room.mode])
 
   const header = (
     <header className="w-full max-w-2xl flex items-center justify-between gap-3 mb-5 sm:mb-8 flex-wrap">
@@ -262,7 +316,7 @@ function RoundScreen({
         <main className="w-full max-w-2xl flex-1 space-y-6 animate-pop-in">
           <div className="text-center space-y-2">
             <p className="text-sm text-neutral-500 uppercase tracking-widest">Round {room.roundNumber} results</p>
-            <h1 className="text-2xl font-semibold tracking-tight">Time&apos;s up!</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{untimed ? 'You finished!' : "Time's up!"}</h1>
           </div>
           <RoundRankingList
             players={survivors}
@@ -284,7 +338,9 @@ function RoundScreen({
       <RunPlayer
         getQuestion={getQuestion}
         startedAt={startedAt}
-        durationMs={mode.roundSeconds * 1000}
+        durationMs={untimed ? NO_TIMER_MS : mode.roundSeconds * 1000}
+        untimed={untimed}
+        totalQuestions={untimed ? deck.length : undefined}
         maxStrikes={mode.threeStrikes ? STRIKE_LIMIT : undefined}
         onProgress={handleProgress}
         onFinish={handleFinish}
@@ -394,7 +450,9 @@ function RoundRankingList({
               </p>
               <p className="text-xs text-neutral-500">
                 {p?.summary
-                  ? `${p.summary.correct}/${p.summary.total} correct · ${p.summary.accuracy}% · best combo ${p.summary.bestStreak}`
+                  ? `${p.summary.correct}/${p.summary.total} correct · ${p.summary.accuracy}% · best streak ${p.summary.bestStreak}${
+                      p.summary.untimed && p.summary.seconds !== undefined ? ` · ${clock(p.summary.seconds)}` : ''
+                    }`
                   : 'Still answering…'}
               </p>
             </div>

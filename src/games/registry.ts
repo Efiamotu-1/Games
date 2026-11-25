@@ -14,8 +14,18 @@ import MultiplayerRapidRun from './rapid-run/MultiplayerRapidRun'
 import RapidRunModePicker from './rapid-run/RapidRunModePicker'
 import { startRapidRun } from './rapid-run/rapidApi'
 import { DEFAULT_RAPID_MODE, newRapidPayload, type RapidPayload } from './rapid-run/types'
+import MultiplayerTruthOrDare from './truth-or-dare/MultiplayerTruthOrDare'
+import TruthOrDareModePicker from './truth-or-dare/TruthOrDareModePicker'
+import { startTruthOrDare } from './truth-or-dare/todApi'
+import { DEFAULT_TOD_MODE, newTodPayload, type TodPayload } from './truth-or-dare/types'
 import { startRace } from '../shared/roomApi'
 import type { Room } from '../shared/types'
+
+/**
+ * Turn this on to make Truth or Dare appear in the arcade. While false it is hidden from the home
+ * screen and its URLs send people back home.
+ */
+const ENABLE_TRUTH_OR_DARE = false
 
 export interface MultiplayerGameProps {
   room: Room
@@ -36,7 +46,11 @@ export interface GameDefinition {
   minPlayers: number
   maxPlayers: number
   available: boolean
+  /** Hidden games are not listed and cannot be opened by URL. */
+  hidden?: boolean
   supportsSolo: boolean
+  /** Text for the solo button on the home screen. Defaults to "Practice Solo". */
+  soloLabel?: string
   soloComponent: ComponentType<{ onExit: () => void }> | null
   multiplayerComponent: ComponentType<MultiplayerGameProps> | null
   /** Returns the payload (passage text, prompt object, etc.) to seed a fresh multiplayer round. */
@@ -98,11 +112,12 @@ export const GAMES: GameDefinition[] = [
   {
     id: 'rapid-run',
     name: 'Rapid-Run Trivia',
-    tagline: 'Everyone answers the same questions at once. Top score wins, or play elimination.',
+    tagline: "Play today's daily trivia and climb the leaderboard, or race your friends on the same questions.",
     minPlayers: 2,
     maxPlayers: 12,
     available: true,
     supportsSolo: true,
+    soloLabel: 'Play Daily Trivia',
     soloComponent: RapidRunGame,
     multiplayerComponent: MultiplayerRapidRun,
     getStartPayload: newRapidPayload,
@@ -111,19 +126,20 @@ export const GAMES: GameDefinition[] = [
     modePickerComponent: RapidRunModePicker,
   },
   {
-    id: 'trivia-battle',
-    name: 'Trivia Battle',
-    tagline: 'Everyone answers simultaneously.',
+    id: 'truth-or-dare',
+    name: 'Truth or Dare',
+    tagline: 'Take turns picking truth or dare. Answer honestly or do the dare.',
     minPlayers: 2,
-    maxPlayers: 20,
-    available: false,
+    maxPlayers: 12,
+    available: true,
+    hidden: !ENABLE_TRUTH_OR_DARE,
     supportsSolo: false,
     soloComponent: null,
-    multiplayerComponent: null,
-    getStartPayload: null,
-    startGame: null,
-    defaultMode: {},
-    modePickerComponent: null,
+    multiplayerComponent: MultiplayerTruthOrDare,
+    getStartPayload: newTodPayload,
+    startGame: (code, payload) => startTruthOrDare(code, payload as TodPayload),
+    defaultMode: { ...DEFAULT_TOD_MODE },
+    modePickerComponent: TruthOrDareModePicker,
   },
   {
     id: 'emoji-pictionary',
