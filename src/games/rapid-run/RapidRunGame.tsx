@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { dealDaily, type Question } from './questions'
+import { CATEGORIES, dealDaily, type Question } from './questions'
 import { fetchBatch, fetchLatestBatch, todayKey } from './generatedApi'
 import {
   fetchLeaderboard,
@@ -360,42 +360,95 @@ function Results({
 }
 
 function AnswerReview({ deck, picks }: { deck: Question[]; picks: number[] }) {
+  const [tab, setTab] = useState('All')
+  const played = picks.length > 0
+
+  // Per category: how many questions there were, how many were answered, and how many were right.
+  const stats = useMemo(() => {
+    const map = new Map<string, { total: number; answered: number; correct: number }>()
+    deck.forEach((q, i) => {
+      const entry = map.get(q.category) ?? { total: 0, answered: 0, correct: 0 }
+      entry.total += 1
+      if (picks[i] !== undefined) {
+        entry.answered += 1
+        if (picks[i] === q.correct) entry.correct += 1
+      }
+      map.set(q.category, entry)
+    })
+    return map
+  }, [deck, picks])
+
+  const categories = CATEGORIES.filter((c) => stats.has(c))
+  const overall = [...stats.values()].reduce(
+    (sum, e) => ({ total: sum.total + e.total, answered: sum.answered + e.answered, correct: sum.correct + e.correct }),
+    { total: 0, answered: 0, correct: 0 },
+  )
+  const tabs = [
+    { id: 'All', stat: overall },
+    ...categories.map((c) => ({ id: c, stat: stats.get(c)! })),
+  ]
+  const visible = deck.map((q, i) => ({ q, i })).filter(({ q }) => tab === 'All' || q.category === tab)
+
   return (
-    <ol className="space-y-3">
-      {deck.map((q, i) => {
-        const picked = picks[i]
-        return (
-          <li key={q.id} className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm">
-            <p className="text-[11px] uppercase tracking-wider text-neutral-500">
-              {i + 1} · {q.category}
-            </p>
-            <p className="mt-1 font-medium">{q.text}</p>
-            <ul className="mt-2 space-y-1">
-              {q.options.map((option, j) => {
-                const right = j === q.correct
-                const wrongPick = j === picked && !right
-                return (
-                  <li
-                    key={j}
-                    className={`rounded-lg px-3 py-1.5 ${
-                      right
-                        ? 'bg-emerald-500/15 text-emerald-200'
-                        : wrongPick
-                          ? 'bg-rose-500/15 text-rose-200'
-                          : 'text-neutral-400'
-                    }`}
-                  >
-                    {option}
-                    {right ? ' ✓' : ''}
-                    {j === picked ? ' (your pick)' : ''}
-                  </li>
-                )
-              })}
-            </ul>
-          </li>
-        )
-      })}
-    </ol>
+    <div className="space-y-3">
+      <div role="tablist" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {tabs.map(({ id, stat }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`shrink-0 rounded-xl border px-3.5 py-2 text-left transition-colors ${
+              tab === id
+                ? 'border-violet-400 bg-violet-500/15 text-violet-100'
+                : 'border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+            }`}
+          >
+            <span className="block text-xs font-medium">{id}</span>
+            <span className="block text-sm font-semibold tabular-nums">
+              {played ? `${stat.correct}/${stat.answered}` : stat.total}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <ol className="space-y-3">
+        {visible.map(({ q, i }) => {
+          const picked = picks[i]
+          return (
+            <li key={q.id} className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm">
+              <p className="text-[11px] uppercase tracking-wider text-neutral-500">
+                {i + 1} · {q.category}
+                {played && picked === undefined ? ' · not answered' : ''}
+              </p>
+              <p className="mt-1 font-medium">{q.text}</p>
+              <ul className="mt-2 space-y-1">
+                {q.options.map((option, j) => {
+                  const right = j === q.correct
+                  const wrongPick = j === picked && !right
+                  return (
+                    <li
+                      key={j}
+                      className={`rounded-lg px-3 py-1.5 ${
+                        right
+                          ? 'bg-emerald-500/15 text-emerald-200'
+                          : wrongPick
+                            ? 'bg-rose-500/15 text-rose-200'
+                            : 'text-neutral-400'
+                      }`}
+                    >
+                      {option}
+                      {right ? ' ✓' : ''}
+                      {j === picked ? ' (your pick)' : ''}
+                    </li>
+                  )
+                })}
+              </ul>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }
 
