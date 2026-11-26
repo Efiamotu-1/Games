@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { dealDaily, type Question } from './questions'
-import { fetchBatch, fetchLatestBatch } from './generatedApi'
+import { fetchBatch, fetchLatestBatch, todayKey } from './generatedApi'
 import {
   fetchLeaderboard,
   fetchMyEntry,
@@ -136,6 +136,7 @@ export default function RapidRunGame({ onExit }: { onExit: () => void }) {
           <Ready
             day={day}
             questionCount={deck.length}
+            stale={day !== todayKey()}
             nickname={nickname}
             setNickname={setNickname}
             limitSeconds={limitSeconds}
@@ -189,6 +190,7 @@ function Unavailable({ onExit }: { onExit: () => void }) {
 function Ready({
   day,
   questionCount,
+  stale,
   nickname,
   setNickname,
   limitSeconds,
@@ -198,6 +200,8 @@ function Ready({
 }: {
   day: string
   questionCount: number
+  /** True when this is an older set because today's isn't available yet. */
+  stale: boolean
   nickname: string
   setNickname: (value: string) => void
   limitSeconds: number
@@ -207,6 +211,11 @@ function Ready({
 }) {
   return (
     <div className="w-full max-w-xl space-y-6 animate-pop-in">
+      {stale && (
+        <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-200">
+          Today&apos;s new questions aren&apos;t ready yet, so this is the {dayLabel(day)} set.
+        </p>
+      )}
       <div className="text-center space-y-2">
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">Daily Trivia</h1>
         <p className="text-sm sm:text-base text-neutral-400">

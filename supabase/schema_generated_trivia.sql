@@ -24,10 +24,11 @@ create policy "generated_questions readable" on generated_questions
 -- No insert/update/delete policy on purpose: the anon key can't write here.
 
 -- ---------------------------------------------------------------------------------------------
--- OPTIONAL: generate the day's questions automatically, one category every 5 minutes from 03:00 UTC.
+-- OPTIONAL: prepare tomorrow's questions every night. One category every 5 minutes from 21:00 UTC
+-- (22:00 in Lagos), so the new set is complete well before the day changes at midnight in Lagos.
 -- (One category per call keeps each run inside Supabase's Edge Function limits.)
--- Replace YOUR-CRON-SECRET with the value of your CRON_SECRET secret, then run it once.
--- The project ref below is already yours.
+-- Replace YOUR-CRON-SECRET with the value of your CRON_SECRET secret, then run it once. Running it again
+-- updates the existing jobs.
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
@@ -40,7 +41,7 @@ begin
   for i in 1..array_length(cats, 1) loop
     perform cron.schedule(
       'trivia-' || lower(replace(cats[i], ' ', '-')),
-      ((i - 1) * 5) || ' 3 * * *',
+      ((i - 1) * 5) || ' 21 * * *',
       format(
         $job$select net.http_post(
           url := 'https://sxvftcevakpassorpwcc.supabase.co/functions/v1/generate-trivia',

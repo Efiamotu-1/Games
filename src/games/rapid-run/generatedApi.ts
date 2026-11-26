@@ -17,10 +17,18 @@ function toExtra(r: Row): ExtraQuestion {
   return { id: r.id, category: r.category, level: r.difficulty, text: r.text, answer: r.answer, wrong: r.wrong }
 }
 
+/** The trivia day starts at midnight in this time zone. Keep in sync with the generator. */
+const TIME_ZONE = 'Africa/Lagos'
+
+/** Today's date (YYYY-MM-DD) in the trivia time zone. */
+export function todayKey(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date())
+}
+
 /** A day's batch is written category by category overnight, so it only counts once it is complete. */
 const SETTLE_MS = 45 * 60 * 1000
 
-/** The newest day whose batch is complete (every category present, or no new rows for a while). */
+/** The newest day, no later than today, whose batch is complete (every category present, or no new rows for a while). */
 async function fetchReadyDay(): Promise<string | null> {
   const { data, error } = await supabase
     .from('generated_questions')
@@ -36,7 +44,10 @@ async function fetchReadyDay(): Promise<string | null> {
     entry.newest = Math.max(entry.newest, new Date(row.created_at).getTime())
     days.set(row.day, entry)
   }
+  const today = todayKey()
   for (const [day, entry] of days) {
+    // A set prepared ahead for tomorrow stays hidden until the day arrives.
+    if (day > today) continue
     const complete = CATEGORIES.every((c) => entry.categories.has(c))
     if (complete || Date.now() - entry.newest >= SETTLE_MS) return day
   }

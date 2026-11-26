@@ -23,6 +23,9 @@ const CATEGORIES = [
   'Pop Culture',
   'Literature',
 ]
+// The trivia day starts at midnight in this time zone (Lagos has no daylight saving).
+const TIME_ZONE = 'Africa/Lagos'
+const dateIn = (date: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(date) // YYYY-MM-DD
 const PER_LEVEL = 10 // questions per category per difficulty, so 160 a day
 
 interface Generated {
@@ -159,7 +162,9 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({}))
-  const day: string = typeof body.day === 'string' ? body.day : new Date().toISOString().slice(0, 10)
+  // Default: the date it will be in 3 hours. The nightly job runs at 22:00, so it prepares tomorrow's set, and a
+  // manual run in the daytime prepares today's.
+  const day: string = typeof body.day === 'string' ? body.day : dateIn(new Date(Date.now() + 3 * 60 * 60 * 1000))
   const force = body.force === true
 
   // One category per call keeps each run inside Supabase's time and memory limits.
