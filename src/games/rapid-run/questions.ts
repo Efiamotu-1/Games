@@ -121,7 +121,7 @@ export function dealSeeded(
   return deck
 }
 
-/** Every question of the filtered pool exactly once, in a seed-determined order (for rounds with no timer). */
+/** Every question of the filtered pool exactly once, in a seed-determined order (for full-set rounds). */
 export function dealOnce(seed: number, options: DealOptions, extra: ExtraQuestion[]): Question[] {
   const pool = poolFor(options, extra)
   const rand = mulberry32(seed)

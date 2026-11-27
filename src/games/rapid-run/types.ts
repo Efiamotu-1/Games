@@ -3,14 +3,17 @@ import { CATEGORIES, type Difficulty } from './questions'
 export type RapidFormat = 'classic' | 'elimination'
 
 /**
- * The time limits offered everywhere (daily trivia and room lobbies). 0 means no timer: the player answers every
- * question, and the faster finisher wins ties.
+ * The long option: every question is asked once, the run ends when the player finishes or time is up, and the
+ * faster finisher wins ties. Shorter limits are sprints that reshuffle the set if a player gets through it.
  */
+export const FULL_SET_SECONDS = 15 * 60
+
+/** The time limits offered everywhere (daily trivia and room lobbies). */
 export const TIME_LIMITS = [
-  { seconds: 0, label: 'No timer' },
   { seconds: 60, label: '1 min' },
   { seconds: 120, label: '2 min' },
   { seconds: 300, label: '5 min' },
+  { seconds: FULL_SET_SECONDS, label: '15 min' },
 ] as const
 
 export const ROUND_SECONDS_OPTIONS = TIME_LIMITS.map((t) => t.seconds)
@@ -37,7 +40,7 @@ export interface RapidMode {
 
 export const DEFAULT_RAPID_MODE: RapidMode = {
   format: 'classic',
-  roundSeconds: 0,
+  roundSeconds: FULL_SET_SECONDS,
   rounds: 1,
   difficulty: 'mixed',
   categories: [],
@@ -97,6 +100,6 @@ export interface RunSummary {
   accuracy: number
   /** Seconds the run took (set for every run). */
   seconds?: number
-  /** True when the round had no timer, so time is the tie-breaker. */
-  untimed?: boolean
+  /** True when each question was asked once, so time is the tie-breaker. */
+  fullSet?: boolean
 }

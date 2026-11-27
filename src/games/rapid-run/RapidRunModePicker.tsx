@@ -3,6 +3,7 @@ import { CATEGORIES, poolSize } from './questions'
 import { useLatestQuestions } from './generatedApi'
 import {
   DIFFICULTIES,
+  FULL_SET_SECONDS,
   ROUND_COUNT_OPTIONS,
   TIME_LIMITS,
   STRIKE_LIMIT,
@@ -16,13 +17,13 @@ const FORMATS: { id: RapidFormat; label: string; description: string }[] = [
     id: 'classic',
     label: 'Classic',
     description:
-      'Everyone answers the same questions at once. When the round ends, scores are ranked, and the faster finisher wins a tie. Play several rounds and your totals add up.',
+      'Everyone answers the same questions at once. When the round ends, scores are ranked. Play several rounds and your totals add up.',
   },
   {
     id: 'elimination',
     label: 'Elimination',
     description:
-      "Everyone answers the same questions at once. When the clock runs out, whoever scored lowest is eliminated and the rest go again, until one player is left. Every correct answer is worth one point. Watch the live board to see if you're in the danger zone.",
+      "Everyone answers the same questions at once. When the round ends, whoever scored lowest is eliminated and the rest go again, until one player is left. Every correct answer is worth one point. Watch the live board to see if you're in the danger zone.",
   },
 ]
 
@@ -69,8 +70,8 @@ export default function RapidRunModePicker({ mode, onChange, disabled }: ModePic
             ))}
           </div>
           <p className="text-xs text-neutral-500">
-            {current.roundSeconds === 0
-              ? 'No timer: everyone answers every question once. Ties go to whoever finishes faster.'
+            {current.roundSeconds === FULL_SET_SECONDS
+              ? 'Each question is asked once. The round ends when you finish or time is up. Ties go to whoever finishes faster.'
               : 'The round ends when time is up.'}
           </p>
         </Section>

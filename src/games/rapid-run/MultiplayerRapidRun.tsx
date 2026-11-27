@@ -9,6 +9,7 @@ import { dealOnce, dealSeeded, type ExtraQuestion } from './questions'
 import { useBatch } from './generatedApi'
 import { advanceRapidRound, finishRapidGame, publishLiveScore, resetRapidForRematch, submitRunSummary } from './rapidApi'
 import {
+  FULL_SET_SECONDS,
   STRIKE_LIMIT,
   isRapidPayload,
   newRapidPayload,
@@ -28,7 +29,6 @@ type RoomPlayer = Room['players'][number]
 type Totals = Record<string, number>
 
 const LIVE_THROTTLE_MS = 350
-const NO_TIMER_MS = 24 * 60 * 60 * 1000
 
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
@@ -173,19 +173,20 @@ function RoundScreen({
   const isElimination = mode.format === 'elimination'
   const carry = useMemo(() => payload.totals ?? {}, [payload.totals])
   const categoryKey = mode.categories.join('|')
-  const untimed = mode.roundSeconds === 0
+  const fullSet = mode.roundSeconds === FULL_SET_SECONDS
   const deck = useMemo(
     () =>
-      untimed
+      fullSet
         ? dealOnce(payload.seed, { difficulty: mode.difficulty, categories: mode.categories }, extra)
         : dealSeeded(payload.seed, { difficulty: mode.difficulty, categories: mode.categories }, extra),
     // categoryKey stands in for the categories array, which is rebuilt on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [payload.seed, mode.difficulty, categoryKey, extra, untimed],
+    [payload.seed, mode.difficulty, categoryKey, extra, fullSet],
   )
   const getQuestion = useCallback((i: number) => deck[i] ?? null, [deck])
   const progress = useRapidProgress(room.code)
   const [ended, setEnded] = useState(false)
+  const [answeredAll, setAnsweredAll] = useState(false)
   const lastSent = useRef(0)
   const advancing = useRef(false)
   const isLastRound = !isElimination && room.roundNumber >= mode.rounds
@@ -212,6 +213,7 @@ function RoundScreen({
   const handleFinish = useCallback(
     (run: RunResult) => {
       setEnded(true)
+      setAnsweredAll(fullSet && run.total === deck.length)
       submitRunSummary(selfId, {
         score: run.score,
         correct: run.correct,
@@ -219,10 +221,10 @@ function RoundScreen({
         bestStreak: run.bestStreak,
         accuracy: run.total ? Math.round((run.correct / run.total) * 100) : 0,
         seconds: run.seconds,
-        untimed,
+        fullSet,
       }).catch(() => {})
     },
-    [selfId, untimed],
+    [selfId, fullSet, deck.length],
   )
 
   const allSubmitted = survivors.every((p) => progress.find((x) => x.playerId === p.id)?.finished)
@@ -316,7 +318,7 @@ function RoundScreen({
         <main className="w-full max-w-2xl flex-1 space-y-6 animate-pop-in">
           <div className="text-center space-y-2">
             <p className="text-sm text-neutral-500 uppercase tracking-widest">Round {room.roundNumber} results</p>
-            <h1 className="text-2xl font-semibold tracking-tight">{untimed ? 'You finished!' : "Time's up!"}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{answeredAll ? 'You finished!' : "Time's up!"}</h1>
           </div>
           <RoundRankingList
             players={survivors}
@@ -338,9 +340,8 @@ function RoundScreen({
       <RunPlayer
         getQuestion={getQuestion}
         startedAt={startedAt}
-        durationMs={untimed ? NO_TIMER_MS : mode.roundSeconds * 1000}
-        untimed={untimed}
-        totalQuestions={untimed ? deck.length : undefined}
+        durationMs={mode.roundSeconds * 1000}
+        totalQuestions={fullSet ? deck.length : undefined}
         maxStrikes={mode.threeStrikes ? STRIKE_LIMIT : undefined}
         onProgress={handleProgress}
         onFinish={handleFinish}
@@ -451,7 +452,7 @@ function RoundRankingList({
               <p className="text-xs text-neutral-500">
                 {p?.summary
                   ? `${p.summary.correct}/${p.summary.total} correct · ${p.summary.accuracy}% · best streak ${p.summary.bestStreak}${
-                      p.summary.untimed && p.summary.seconds !== undefined ? ` · ${clock(p.summary.seconds)}` : ''
+                      p.summary.fullSet && p.summary.seconds !== undefined ? ` · ${clock(p.summary.seconds)}` : ''
                     }`
                   : 'Still answering…'}
               </p>

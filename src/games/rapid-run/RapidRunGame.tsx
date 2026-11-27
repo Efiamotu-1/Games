@@ -12,7 +12,7 @@ import {
   type DailyEntry,
 } from './dailyApi'
 import { rankFor } from './rank'
-import { TIME_LIMITS } from './types'
+import { FULL_SET_SECONDS, TIME_LIMITS } from './types'
 import RunPlayer, { Stat, type RunResult } from './RunPlayer'
 
 type Phase = 'loading' | 'unavailable' | 'ready' | 'playing' | 'done'
@@ -22,7 +22,6 @@ const NICKNAME_MAX = 20
 
 /** Players with this nickname get a button to review every answer once they have finished. */
 const REVIEWER_NICKNAME = 'abanikanda'
-const NO_TIMER_MS = 24 * 60 * 60 * 1000
 
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
@@ -44,7 +43,7 @@ export default function RapidRunGame({ onExit }: { onExit: () => void }) {
   const [rank, setRank] = useState<number | null>(null)
   const [run, setRun] = useState<RunResult | null>(null)
   const [saving, setSaving] = useState<Saving>('saved')
-  const [limitSeconds, setLimitSeconds] = useState(0)
+  const [limitSeconds, setLimitSeconds] = useState<number>(FULL_SET_SECONDS)
 
   const refreshBoard = useCallback(async (forDay: string) => {
     const entries = await fetchLeaderboard(forDay).catch(() => null)
@@ -149,8 +148,7 @@ export default function RapidRunGame({ onExit }: { onExit: () => void }) {
           <RunPlayer
             getQuestion={getQuestion}
             totalQuestions={deck.length}
-            durationMs={limitSeconds ? limitSeconds * 1000 : NO_TIMER_MS}
-            untimed={limitSeconds === 0}
+            durationMs={limitSeconds * 1000}
             onFinish={handleFinish}
           />
         )}
@@ -253,8 +251,8 @@ function Ready({
             ))}
           </div>
           <p className="text-xs text-neutral-500">
-            {limitSeconds === 0
-              ? `No timer: answer all ${questionCount} questions. Ties are broken by who finishes faster.`
+            {limitSeconds === FULL_SET_SECONDS
+              ? `The run ends when you answer all ${questionCount} questions or time is up. Ties are broken by who finishes faster.`
               : 'The run stops when the time is up. Ties are broken by who finishes faster.'}
           </p>
         </div>

@@ -30,8 +30,6 @@ interface RunPlayerProps {
   durationMs?: number
   /** Fires after every answer, so a room can show live standings. */
   onProgress?: (progress: { score: number; answered: number; accuracy: number }) => void
-  /** No countdown: the run ends when the questions do. Shows progress instead of a clock. */
-  untimed?: boolean
   /** Wrong answers allowed before the run ends early. Omit for unlimited. */
   maxStrikes?: number
   /** Rendered between the HUD and the question card. */
@@ -47,7 +45,6 @@ export default function RunPlayer({
   durationMs = DEFAULT_DURATION_MS,
   onProgress,
   maxStrikes,
-  untimed,
   aside,
 }: RunPlayerProps) {
   const [question, setQuestion] = useState<Question | null>(() => getQuestion(0))
@@ -172,11 +169,7 @@ export default function RunPlayer({
     <div className="w-full max-w-2xl space-y-4 sm:space-y-5">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-3">
         <Streak streak={streak} />
-        {untimed ? (
-          <ProgressRing done={asked - 1} total={totalQuestions ?? asked} />
-        ) : (
-          <TimerRing msLeft={msLeft} durationMs={durationMs} secondsLeft={secondsLeft} />
-        )}
+        <TimerRing msLeft={msLeft} durationMs={durationMs} secondsLeft={secondsLeft} />
         <div className="relative text-right">
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Score</p>
           <p className="text-2xl sm:text-3xl font-semibold tabular-nums text-violet-200">{score}</p>
@@ -314,33 +307,6 @@ function Streak({ streak }: { streak: number }) {
   )
 }
 
-function ProgressRing({ done, total }: { done: number; total: number }) {
-  const pct = total > 0 ? Math.min(100, (done / total) * 100) : 0
-  return (
-    <div className="relative h-20 w-20 sm:h-24 sm:w-24">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-        <circle cx="50" cy="50" r="44" fill="none" stroke="#262626" strokeWidth="7" />
-        <circle
-          cx="50"
-          cy="50"
-          r="44"
-          fill="none"
-          stroke="#a78bfa"
-          strokeWidth="7"
-          strokeLinecap="round"
-          pathLength={100}
-          strokeDasharray={`${pct} 100`}
-          style={{ filter: 'drop-shadow(0 0 6px rgba(167,139,250,0.6))' }}
-        />
-      </svg>
-      <span className="absolute inset-0 flex flex-col items-center justify-center text-lg sm:text-xl font-semibold tabular-nums leading-tight">
-        {done}
-        <span className="text-[10px] font-normal text-neutral-500">of {total}</span>
-      </span>
-    </div>
-  )
-}
-
 function TimerRing({ msLeft, durationMs, secondsLeft }: { msLeft: number; durationMs: number; secondsLeft: number }) {
   const pct = (msLeft / durationMs) * 100
   const low = secondsLeft <= Math.min(10, Math.ceil(durationMs / 4000))
@@ -366,7 +332,7 @@ function TimerRing({ msLeft, durationMs, secondsLeft }: { msLeft: number; durati
           low ? 'text-rose-300' : ''
         }`}
       >
-        {secondsLeft}
+        {secondsLeft < 60 ? secondsLeft : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
       </span>
     </div>
   )

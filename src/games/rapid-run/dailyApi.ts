@@ -86,7 +86,7 @@ export async function submitDailyScore(params: {
   nickname: string
   deck: Question[]
   run: RunResult
-  /** The time limit the player chose in seconds; 0 means no timer. */
+  /** The time limit the player chose, in seconds. */
   limitSeconds: number
 }): Promise<{ accepted: boolean; score: number; answered: number; seconds: number }> {
   const answers = params.run.picks.map((pick, i) => ({
