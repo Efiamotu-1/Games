@@ -20,8 +20,6 @@ type Saving = 'saving' | 'saved' | 'failed'
 
 const NICKNAME_MAX = 20
 
-/** Players with this nickname get a button to review every answer once they have finished. */
-const REVIEWER_NICKNAME = 'abanikanda'
 
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
@@ -155,7 +153,6 @@ export default function RapidRunGame({ onExit }: { onExit: () => void }) {
         {phase === 'done' && (
           <Results
             deck={deck}
-            nickname={mine?.nickname ?? nickname}
             run={run}
             mine={mine}
             rank={rank}
@@ -275,7 +272,6 @@ function Ready({
 
 function Results({
   deck,
-  nickname,
   run,
   mine,
   rank,
@@ -285,7 +281,6 @@ function Results({
   onExit,
 }: {
   deck: Question[]
-  nickname: string
   run: RunResult | null
   mine: DailyEntry | null
   rank: number | null
@@ -298,7 +293,6 @@ function Results({
   const answered = mine?.answered ?? run?.total ?? 0
   const accuracy = answered ? Math.round((score / answered) * 100) : 0
   const [showAnswers, setShowAnswers] = useState(false)
-  const isReviewer = nickname.trim().toLowerCase() === REVIEWER_NICKNAME
 
   return (
     <div className="w-full max-w-xl space-y-5 animate-pop-in">
@@ -335,17 +329,15 @@ function Results({
 
       <Leaderboard board={board} mine={mine} />
 
-      {isReviewer && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowAnswers((v) => !v)}
-            className="w-full rounded-xl border border-violet-500/50 py-3 text-sm font-medium text-violet-200 transition-colors hover:border-violet-400"
-          >
-            {showAnswers ? 'Hide all answers' : `See all answers (${deck.length})`}
-          </button>
-          {showAnswers && <AnswerReview deck={deck} picks={run?.picks ?? []} />}
-        </div>
-      )}
+      <div className="space-y-3">
+        <button
+          onClick={() => setShowAnswers((v) => !v)}
+          className="w-full rounded-xl border border-violet-500/50 py-3 text-sm font-medium text-violet-200 transition-colors hover:border-violet-400"
+        >
+          {showAnswers ? 'Hide answers' : `See the answers (${deck.length})`}
+        </button>
+        {showAnswers && <AnswerReview deck={deck} picks={run?.picks ?? []} />}
+      </div>
 
       <button
         onClick={onExit}
@@ -358,7 +350,7 @@ function Results({
 }
 
 function AnswerReview({ deck, picks }: { deck: Question[]; picks: number[] }) {
-  const [tab, setTab] = useState('All')
+  const [chosenTab, setTab] = useState('')
   const played = picks.length > 0
 
   // Per category: how many questions there were, how many were answered, and how many were right.
@@ -377,37 +369,34 @@ function AnswerReview({ deck, picks }: { deck: Question[]; picks: number[] }) {
   }, [deck, picks])
 
   const categories = CATEGORIES.filter((c) => stats.has(c))
-  const overall = [...stats.values()].reduce(
-    (sum, e) => ({ total: sum.total + e.total, answered: sum.answered + e.answered, correct: sum.correct + e.correct }),
-    { total: 0, answered: 0, correct: 0 },
-  )
-  const tabs = [
-    { id: 'All', stat: overall },
-    ...categories.map((c) => ({ id: c, stat: stats.get(c)! })),
-  ]
-  const visible = deck.map((q, i) => ({ q, i })).filter(({ q }) => tab === 'All' || q.category === tab)
+  // The first category is open until the player picks another.
+  const tab = categories.find((c) => c === chosenTab) ?? categories[0]
+  const visible = deck.map((q, i) => ({ q, i })).filter(({ q }) => q.category === tab)
 
   return (
     <div className="space-y-3">
       <div role="tablist" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {tabs.map(({ id, stat }) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={`shrink-0 rounded-xl border px-3.5 py-2 text-left transition-colors ${
-              tab === id
-                ? 'border-violet-400 bg-violet-500/15 text-violet-100'
-                : 'border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
-            }`}
-          >
-            <span className="block text-xs font-medium">{id}</span>
-            <span className="block text-sm font-semibold tabular-nums">
-              {played ? `${stat.correct}/${stat.answered}` : stat.total}
-            </span>
-          </button>
-        ))}
+        {categories.map((id) => {
+          const stat = stats.get(id)!
+          return (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={`shrink-0 rounded-xl border px-3.5 py-2 text-left transition-colors ${
+                tab === id
+                  ? 'border-violet-400 bg-violet-500/15 text-violet-100'
+                  : 'border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+              }`}
+            >
+              <span className="block text-xs font-medium">{id}</span>
+              <span className="block text-sm font-semibold tabular-nums">
+                {played ? `${stat.correct}/${stat.answered}` : stat.total}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       <ol className="space-y-3">
